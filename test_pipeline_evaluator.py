@@ -2,20 +2,23 @@ import numpy as np
 import pandas as pd
 import unittest
 from src.eval_collector import DSTCHumanEvalCollector, DummyEvalCollector
-from src.pipeline_evaluator import PipelineEvaluator, DummyEval
-
+from src.data_collector import DataCollector, DummyDataCollector
+from src.pipeline_evaluator import PipelineEvaluator
+from src.eval_framework import DummyEval
 
 class TestPipelineEvaluator(unittest.TestCase):
     def setUp(self):
         self.desired_framework = DummyEval()
+        self.data_collector = DummyDataCollector()
         self.type = 'spearman'
         self.correlation_level = 'sample'
-        self.model_candidates = ['model1', 'model2']
+        self.model_candidates = ['model1']
         self.desired_dimensions = ["accur", "app"]
         self.dimension_map = {"accur": "dimension1", "app": "dimension2"}
 
         self.dummy_collector = DummyEvalCollector()
-        self.pipeline_evaluator = PipelineEvaluator(self.desired_framework, self.dummy_collector, self.desired_dimensions, self.dimension_map,
+        self.pipeline_evaluator = PipelineEvaluator(self.desired_framework, self.dummy_collector, self.data_collector,
+                                                    self.desired_dimensions, self.dimension_map,
                                                      self.type, self.correlation_level, self.model_candidates)
 
     def test_reference_required(self):
@@ -32,9 +35,8 @@ class TestPipelineEvaluator(unittest.TestCase):
     def test_run_pipeline(self):
         
         # Load using data_collector class
-        reference_responses = None
-        turn_historys = ['history1', 'history2']
-        knowledge_contexts = ['context1', 'context2']
+        sample_indices = [4, 5]
+        reference_responses, turn_historys, knowledge_contexts = self.data_collector.collect_sample_contexts(sample_indices)
 
         # Load from some prediction
         model_responses = [
@@ -43,12 +45,11 @@ class TestPipelineEvaluator(unittest.TestCase):
         ]
 
         # Load using HumanEvalCollector
-        
         human_framework_correlations = self.pipeline_evaluator.run_pipeline(
             model_responses, turn_historys, knowledge_contexts, reference_responses
         )
 
-        self.assertEqual(len(self.pipeline_evaluator.framework_scores), len(self.model_candidates))
+        self.assertEqual(len(self.pipeline_evaluator.framework_scores), len(model_responses))
         self.assertIsInstance(human_framework_correlations, dict)
         print(human_framework_correlations)
 
