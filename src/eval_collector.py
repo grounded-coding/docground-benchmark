@@ -5,19 +5,24 @@ import pandas as pd
 from abc import ABC, abstractmethod
 
 
-class EvalDataCollector(ABC):
+class HumanEvalCollector(ABC):
 
     def __init__(self):
         pass
 
     def extract_ratings(self, human_eval_path, dims):
-        # For each model response the human score should look like {'dimension1': 0.8, 'dimension2': 0.9} where the keys are the dimension names and the values are the human scores
-        #    human_scores = [
-        #        {'dimension1': 0.7, 'dimension2': 0.6}, ...
-        #   ]
         pass
 
-class DSTCHumanEvalCollector(EvalDataCollector):
+class DummyEvalCollector(HumanEvalCollector):    
+
+    def extract_ratings(self, human_eval_path, dims=None):
+        human_scores = [
+            {'dimension1': 0.8, 'dimension2': 0.9},
+            {'dimension1': 0.7, 'dimension2': 0.6}
+        ]
+        return human_scores
+
+class DSTCHumanEvalCollector(HumanEvalCollector):
 
     def extract_ratings(self, sample_indices, human_eval_path, dims=["accuracy", "appropriateness"]):
         ratings = []
