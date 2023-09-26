@@ -26,17 +26,18 @@ class TestPipelineEvaluator(unittest.TestCase):
 
     def test_compute_correlation(self):
         # Test for sample level correlation
+        sample_indices = [4,5]
         framework_scores = [
             {'accur': 0.8, 'app': 0.7},
             {'accur': 0.6, 'app': 0.8}
         ]
-        correlation = self.pipeline_evaluator._compute_correlations(framework_scores, self.dimension_map)
+        human_scores = self.dummy_collector.extract_ratings(sample_indices, human_dims=["dimension1", "dimension2"])
+        correlation = self.pipeline_evaluator._compute_correlations(framework_scores, human_scores, self.dimension_map)
 
     def test_run_pipeline(self):
         
         # Load using data_collector class
         sample_indices = [4, 5]
-        reference_responses, turn_historys, knowledge_contexts = self.data_collector.collect_sample_contexts(sample_indices)
 
         # Load from some prediction
         model_responses = [
@@ -46,7 +47,7 @@ class TestPipelineEvaluator(unittest.TestCase):
 
         # Load using HumanEvalCollector
         human_framework_correlations = self.pipeline_evaluator.run_pipeline(
-            model_responses, turn_historys, knowledge_contexts, reference_responses
+            model_responses, sample_indices
         )
 
         self.assertEqual(len(self.pipeline_evaluator.framework_scores), len(model_responses))

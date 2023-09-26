@@ -3,12 +3,19 @@ from typing import List, Tuple
 import json
 from itertools import groupby
 from operator import itemgetter
+from utils.file_processing import load_data
 
 
 class DataCollector(ABC):
-    def __init__(self, dataset: str, dataset_split: str):
+    def __init__(self, dataset: str, dataset_split: str, dataset_name: str):
         self.dataset = dataset
         self.dataset_split = dataset_split
+        self.dataset_name = dataset_name
+
+    def get_name(self):
+        if self.dataset_name is None:
+            return self.__class__.__name__
+        return self.dataset_name
 
     @abstractmethod
     def collect_sample_contexts(self, sample_indices: List[int]) -> Tuple[
@@ -26,7 +33,7 @@ class DataCollector(ABC):
 
 class DummyDataCollector(DataCollector):
     def __init__(self) -> None:
-        super().__init__(dataset="dummy_data", dataset_split="dummy_split")
+        super().__init__(dataset="dummy_data", dataset_split="dummy_split", dataset_name="dummy")
 
     def collect_sample_contexts(self, sample_indices):
         reference_responses = ["Dummy response label"] * len(sample_indices)
@@ -40,10 +47,10 @@ class DSTCDataCollector(DataCollector):
     Collect sample contexts for the DSTC11 Track 5 dataset. Also compatible with DSTC9 Track 1 dataset.
     """
 
-    def __init__(self, dataset, dataset_split) -> None:
-        super().__init__(dataset, dataset_split)
+    def __init__(self, dataset_path, dataset_split, dataset_name=None) -> None:
+        super().__init__(dataset_path, dataset_split, dataset_name)
 
-    def get_samples_with_target(self,) -> Tuple[
+    def get_samples_with_target(self, n=-1) -> Tuple[
         List[int], List[str]]:
         """
         Get all samples with target set to True.
@@ -54,13 +61,26 @@ class DSTCDataCollector(DataCollector):
         """
         candidate_responses = []
         sample_indices = []
-        with open(f'{self.dataset}/{dataset_split}/labels.json') as f:
-            data = json.load(f)
-            for i in range(len(data)):
-                if data[i]["target"]:
-                    candidate_responses.append(data[i]["response"])
+        j = 0
+        with open(f'{self.dataset}/{self.dataset_split}/labels.json') as f:
+            labels = json.load(f)
+            for i in range(len(labels)):
+                if labels[i]["target"]:
+                    candidate_responses.append(labels[i]["response"])
                     sample_indices.append(i)
+                    j += 1
+                if n > 0 and j >= n:
+                    break
         return sample_indices
+
+    def get_pred_responses(self, sample_indices, model_candidates, pred_path):
+        candidate = model_candidates[0]
+        pred_data = load_data(pred_path)
+        model_responses = []
+        for index in sample_indices:
+            x = pred_data[index]
+            model_responses.append({candidate: x["response"]} if x["target"] else None)
+        return model_responses
 
     def collect_sample_contexts(self, sample_indices: List[int],
                                 max_n_sent=10, max_turns=10) -> Tuple[List[int], List[List[str]], List[List[str]]]:
@@ -68,13 +88,13 @@ class DSTCDataCollector(DataCollector):
         turn_historys = []
         knowledge_contexts = []
 
-        with open(f'{self.base_path}/{dataset_split}/knowledge.json', encoding="utf-8") as f:
+        with open(f'{self.dataset}/{self.dataset_split}/knowledge.json', encoding="utf-8") as f:
             knowledge = json.load(f)
 
-        with open(f'{self.base_path}/{dataset_split}/labels.json', encoding="utf-8") as f:
+        with open(f'{self.dataset}/{self.dataset_split}/labels.json', encoding="utf-8") as f:
             labels = json.load(f)
 
-        with open(f'{self.base_path}/{dataset_split}/logs.json', encoding="utf-8") as f:
+        with open(f'{self.dataset}/{self.dataset_split}/logs.json', encoding="utf-8") as f:
             logs = json.load(f)
 
         for id in sample_indices:

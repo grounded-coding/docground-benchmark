@@ -5,6 +5,7 @@ from src.eval_framework import EvaluationFramework
 import numpy as np
 from scipy.stats import spearmanr, kendalltau, pearsonr
 from pathlib import Path
+from utils.file_processing import load_data
 import json
 
 
@@ -33,12 +34,19 @@ class PipelineEvaluator:
             self.correlation_level = 'system'
             raise NotImplementedError("System-level correlation is not implemented yet.")
 
-    def run_pipeline(self, model_responses, turn_historys, knowledge_contexts, reference_responses=None):
+    def run_pipeline(self, model_responses, response_indices):
+        reference_responses = None
+
+        # Here we filter model responses to only include response for which we have human evaluations
+        eval_response_indices, cleaned_model_responses = self.eval_collector.get_subset_with_human_eval(response_indices, model_responses)
+        reference_responses, turn_historys, knowledge_contexts = self.data_collector.collect_sample_contexts(eval_response_indices)
+
         if self.desired_framework.reference_required and reference_responses is None:
             raise ValueError("Reference responses are required for the selected evaluation framework.")
 
-        self.framework_scores = self._evaluate_framework(model_responses, reference_responses, turn_historys, knowledge_contexts)
-        human_framework_correlations = self._compute_correlations(self.framework_scores, self.dimension_map)
+        self.framework_scores = self._evaluate_framework(cleaned_model_responses, reference_responses, turn_historys, knowledge_contexts)
+        human_scores = self.eval_collector.extract_ratings(eval_response_indices, self.dimension_map.values())
+        human_framework_correlations = self._compute_correlations(self.framework_scores, human_scores, self.dimension_map)
 
         return human_framework_correlations
 
@@ -47,14 +55,15 @@ class PipelineEvaluator:
         Evaluate the model responses using the desired evaluation framework.
         This function should use persistent storage to save the evaluation results.
         If the evaluation results are already available, they should be loaded from storage.
-        :param model_responses: A list of model responses for each data sample
+        :param model_responses: A list of model responses for each data sample looking like
+            [{"model1": "response1", "model2": "response2"}, {"model1": "response1", "model2": "response2"}, ...]
         :param reference_responses: A list of reference responses for each data sample
         :param turn_historys: A list of turn histories for each data sample
         :param knowledge_contexts: A list of knowledge contexts for each data sample
         :return: A list of evaluation scores for each data sample
         """
 
-        score_path = Path(self.data_collector.dataset) / self.data_collector.dataset_split / self.model_candidates[0] \
+        score_path = Path(self.data_collector.get_name()) / self.data_collector.dataset_split / self.model_candidates[0] \
                      / (self.desired_framework.get_name() + ".json")
         if score_path.is_file():
             with open(score_path, "r") as read_file:
@@ -62,7 +71,6 @@ class PipelineEvaluator:
         else:
             score_path.parent.mkdir(parents=True, exist_ok=True)
             # Prepare model responses
-            # TODO Clarify whether None responses are allowed at some point
             specific_responses = [resp[self.model_candidates[0]] for resp in model_responses]
             framework_scores = self.desired_framework.evaluate(specific_responses, reference_responses,
                                                            turn_historys, knowledge_contexts, self.desired_dimensions)
@@ -70,13 +78,12 @@ class PipelineEvaluator:
                 json.dump(framework_scores, write_file)
         return framework_scores
 
-    def _compute_correlations(self, framework_scores, dimension_map):
+    def _compute_correlations(self, framework_scores, human_scores, dimension_map):
         """
         Compute the correlation between the framework scores and the human scores.
         :param framework_scores: A list of framework scores for each data sample
         :param dimension_map: A dictionary mapping the framework scores to the desired human evaluation dimensions
         """
-        human_scores = self.eval_collector.extract_ratings(self.framework_scores, self.desired_dimensions)
         correlations = {}
         for framework_dim in self.desired_dimensions:
             human_dim = dimension_map[framework_dim]
