@@ -1,1 +1,2 @@
 git+https://github.com/nils-hde/LLEval.git
+git+https://github.com/nils-hde/UniEval.git

@@ -7,6 +7,7 @@ from summ_eval.meteor_metric import MeteorMetric
 from summ_eval.bleu_metric import BleuMetric
 from lleval.scorer import PromptScorer
 from collections import Counter
+from uni_eval.evaluator import get_evaluator
 from lleval.evaluator import PromptTemplate, DialogEvaluator
 
 
@@ -29,7 +30,14 @@ class UniEval(EvaluationFramework):
         super().__init__(['groundedness', 'informativeness', 'fluency', 'engagingness', 'overall'])
 
     def evaluate(self, model_responses, reference_responses, turn_historys, knowledge_contexts, dims):
-        pass
+        # knowledge_contexts is a list of lists of strings. for unieval these documents are concatenated and joined by a newline separator
+        knowledge_contexts = ['\n'.join(context) for context in knowledge_contexts]
+        # turn_historys is a list of lists of strings. for unieval these turns are concatenated and joined by a newline separator. at the very end we attach 2 newline separators
+        turn_historys = ['\n'.join(turns) + '\n\n' for turns in turn_historys]
+        data = convert_to_json(output_list=model_responses, src_list=turn_historys, context_list=knowledge_contexts)
+        evaluator = get_evaluator("dialogue")
+        eval_scores = evaluator.evaluate(data, dims=dims, print_result=True)
+        return eval_scores
 
 
 class DummyEval(EvaluationFramework):

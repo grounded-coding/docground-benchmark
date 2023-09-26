@@ -1,6 +1,6 @@
 from src.data_collector import DSTCDataCollector, DummyDataCollector
 from src.pipeline_evaluator import PipelineEvaluator
-from src.eval_framework import DummyEval, LLEval, KnowledgeF1, BLEU
+from src.eval_framework import DummyEval, LLEval, KnowledgeF1, BLEU, UniEval
 from src.eval_collector import DummyEvalCollector, DSTCHumanEvalCollector
 import json
 from utils.file_processing import load_data
@@ -8,8 +8,8 @@ from typing import List, Dict
 
 
 if __name__ == "__main__":
-    desired_framework = BLEU()
-    framework_dimensions = ["bleu-4"]
+    desired_framework = UniEval()
+    framework_dimensions = ["groundedness"]
 
     # Load from some prediction
     baseline_pred_path = "../dstc11-track5/results/results_dstc9/baseline/entry0.json"
@@ -20,7 +20,7 @@ if __name__ == "__main__":
     response_indices = data_collector.get_samples_with_target(n=200)
     model_responses = data_collector.get_pred_responses(response_indices, model_candidates, baseline_pred_path)
 
-    dimension_map = {"bleu-4": "accuracy"}
+    dimension_map = {"groundedness": "accuracy"}
     eval_collector = DSTCHumanEvalCollector(human_eval_path=baseline_human_eval)
 
     type = 'spearman'
