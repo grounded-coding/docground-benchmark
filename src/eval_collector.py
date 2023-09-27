@@ -27,6 +27,30 @@ class DummyEvalCollector(HumanEvalCollector):
             for dim in human_dims:
                 human_scores[i][dim] = np.random.rand()
         return human_scores
+    
+
+class BEGINHumanEvalCollector(HumanEvalCollector):
+    def __init__(self, human_eval_path):
+        super().__init__()
+        # read from human eval path the file wh ich is a tsv file with columns_ id, model_name, data_source, knowledge_message, response, begin_label
+        self.human_eval = pd.read_csv(human_eval_path, sep='\t')
+
+    def extract_ratings(self, sample_indices, human_dims=["attributability"]):
+        ratings = []
+        human_evals = self.human_eval
+
+        for sample_index in sample_indices:
+            if human_evals.iloc[sample_index] is not None:
+                rating = {}
+                # get the entry in column begin_label
+                rating["attributability"] = human_evals.iloc[sample_index]["begin_label"]
+                ratings.append(rating)
+            else:
+                raise ValueError("No human ratings for sample {}".format(sample_index))
+
+        # TODO Convert to numeric ratings
+        return ratings
+
 
 class DSTCHumanEvalCollector(HumanEvalCollector):
     def __init__(self, human_eval_path):
