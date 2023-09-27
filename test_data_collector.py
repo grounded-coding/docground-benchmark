@@ -8,8 +8,8 @@ from typing import List, Dict
 
 
 if __name__ == "__main__":
-    desired_framework = UniEval()
-    framework_dimensions = ["groundedness"]
+    desired_framework = LLEval()
+    framework_dimensions = ["accurate"]
 
     # Load from some prediction
     baseline_pred_path = "../dstc11-track5/results/results_dstc9/baseline/entry0.json"
@@ -20,7 +20,7 @@ if __name__ == "__main__":
     response_indices = data_collector.get_samples_with_target(n=200)
     model_responses = data_collector.get_pred_responses(response_indices, model_candidates, baseline_pred_path)
 
-    dimension_map = {"groundedness": "accuracy"}
+    dimension_map = {"accurate": "accuracy"}
     eval_collector = DSTCHumanEvalCollector(human_eval_path=baseline_human_eval)
 
     type = 'spearman'

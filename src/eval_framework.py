@@ -5,10 +5,13 @@ import pandas as pd
 import numpy as np
 from summ_eval.meteor_metric import MeteorMetric
 from summ_eval.bleu_metric import BleuMetric
+from nltk.translate.bleu_score import sentence_bleu
 from lleval.scorer import PromptScorer
 from collections import Counter
 from uni_eval.evaluator import get_evaluator
 from lleval.evaluator import PromptTemplate, DialogEvaluator
+from rouge_score import rouge_scorer
+
 
 
 class EvaluationFramework(ABC):
@@ -104,7 +107,7 @@ class KnowledgeF1(EvaluationFramework):
 
 class BLEU(EvaluationFramework):
     def __init__(self):
-        super().__init__(['bleu-4'], reference_required=True)
+        super().__init__(['bleu-4', 'bleu-1'], reference_required=True)
 
     def evaluate(self, model_responses, reference_responses, turn_historys, knowledge_contexts, dims):
         bleu_metric = BleuMetric()
@@ -112,7 +115,12 @@ class BLEU(EvaluationFramework):
         for response, reference in zip(model_responses, reference_responses):
             assert isinstance(response, str)
             score = {}
-            score["bleu-4"] = bleu_metric.evaluate_example(response, reference)['bleu']
+            for dim in dims:
+                if dim == "bleu-4":
+                    score[dim] = bleu_metric.evaluate_example(response, reference)['bleu']
+                else:
+                    # bleu-1
+                    score[dim] = sentence_bleu([reference.split()], response.split(), weights=(1, 0, 0, 0))
             scores.append(score)
         return scores
 
@@ -132,4 +140,9 @@ class ROUGE(EvaluationFramework):
         super().__init__(['rouge-l','rouge-1','rouge-2'], reference_required=reference_required)
 
     def evaluate(self, model_responses, reference_responses, turn_historys, knowledge_contexts, dims):
-        pass
+        scorer = rouge_scorer.RougeScorer(['rouge1', 'rouge2', 'rougeL'], use_stemmer=True)
+        scores = scorer.score(reference_responses, model_responses)
+        rouge_scores = {}
+        for key in scores.keys():
+            rouge_scores[key] = scores[key].fmeasure * 100
+        return rouge_scores
