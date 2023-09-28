@@ -95,6 +95,9 @@ class BEGINDataCollector(DataCollector):
             # there are no reference responses
             cur_knowledge = data.iloc[index]["knowledge"]
             cur_message = data.iloc[index]["message"]
+            # if cur_message is NaN, replace it with an empty string
+            if pd.isna(cur_message):
+                cur_message = ""
             turn_historys.append([cur_message])
             knowledge_contexts.append([cur_knowledge])
 

@@ -39,7 +39,7 @@ class UniEval(EvaluationFramework):
         turn_historys = ['\n'.join(turns) + '\n\n' for turns in turn_historys]
         data = convert_to_json(output_list=model_responses, src_list=turn_historys, context_list=knowledge_contexts)
         evaluator = get_evaluator("dialogue")
-        eval_scores = evaluator.evaluate(data, dims=dims, print_result=True)
+        eval_scores = evaluator.evaluate(data, dims=dims, print_result=False)
         return eval_scores
 
 
@@ -74,7 +74,7 @@ class LLEval(EvaluationFramework):
 
 class KnowledgeF1(EvaluationFramework):
     def __init__(self):
-        super().__init__(['knowledge-f1'], reference_required=True)
+        super().__init__(['knowledge-f1'], reference_required=False)
 
     def evaluate(self, model_responses, reference_responses, turn_historys, knowledge_contexts, dims, dataset_task_description=""):
         # Knowledge F1 is the average tokenlevel F1 overlap of the generated response and each document in the knowledge context

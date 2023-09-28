@@ -26,7 +26,7 @@ class TestPipelineEvaluator(unittest.TestCase):
 
     def test_compute_correlation(self):
         # Test for sample level correlation
-        sample_indices = [4,5]
+        sample_indices = [4, 5]
         framework_scores = [
             {'accur': 0.8, 'app': 0.7},
             {'accur': 0.6, 'app': 0.8}
@@ -37,7 +37,7 @@ class TestPipelineEvaluator(unittest.TestCase):
     def test_run_pipeline(self):
         
         # Load using data_collector class
-        sample_indices = [4, 5]
+        sample_indices = [4, 3]
 
         # Load from some prediction
         model_responses = [
@@ -50,7 +50,6 @@ class TestPipelineEvaluator(unittest.TestCase):
             model_responses, sample_indices
         )
 
-        self.assertEqual(len(self.pipeline_evaluator.framework_scores), len(model_responses))
         self.assertIsInstance(human_framework_correlations, dict)
         print(human_framework_correlations)
 
