@@ -4,6 +4,7 @@ import json
 from itertools import groupby
 from operator import itemgetter
 from utils.file_processing import load_data
+import pandas as pd
 
 
 class DataCollector(ABC):
@@ -42,13 +43,71 @@ class DummyDataCollector(DataCollector):
         return reference_responses, turn_historys, knowledge_contexts
 
 
+class BEGINDataCollector(DataCollector):
+    """
+    Collect sample contexts for the BEGIN benchmark datasets.
+    """
+
+    def __init__(self, dataset_path, dataset_split, dataset_name=None) -> None:
+        super().__init__(dataset_path, dataset_split, dataset_name)
+
+    def get_samples_with_target(self, n=-1) -> Tuple[
+        List[int], List[str]]:
+        """
+        Get all samples with target set to True.
+
+        :param dataset_split: The dataset split to use.
+        :param dataset: The dataset to use.
+        :return: A tuple of sample indices and candidate responses.
+        """
+        candidate_responses = []
+        sample_indices = []
+        j = 0
+        data = pd.read_csv(f'{self.dataset}/begin_{self.dataset_split}_{self.dataset_name}.tsv', sep='\t')
+        for i in range(len(data)):
+            if data.iloc[i]["response"] is not None:
+                candidate_responses.append(data.iloc[i]["response"])
+                sample_indices.append(i)
+                j += 1
+            if n > 0 and j >= n:
+                break
+        return sample_indices
+
+    def get_pred_responses(self, sample_indices, model_candidates=["baseline"]):
+        candidate = model_candidates[0]
+        pred_data = pd.read_csv(f'{self.dataset}/begin_{self.dataset_split}_{self.dataset_name}.tsv', sep='\t')
+        # Get response entries as a list for all provided sample indices from pred_data. pred_data is a pandas dataframe with column name response
+        model_responses = []
+        for index in sample_indices:
+            x = pred_data.iloc[index]
+            model_responses.append({candidate: x["response"]})
+        return model_responses
+
+    def collect_sample_contexts(self, sample_indices: List[int]) -> Tuple[List[int], List[List[str]], List[List[str]]]:
+        reference_responses = []
+        turn_historys = []
+        knowledge_contexts = []
+        data = pd.read_csv(f'{self.dataset}/begin_{self.dataset_split}_{self.dataset_name}.tsv', sep='\t')
+
+        for index in sample_indices:
+            # the pandas dataframe contains a knowledge column with one knowledge document
+            # it also contains  a message column with a single-turn turn history
+            # there are no reference responses
+            cur_knowledge = data.iloc[index]["knowledge"]
+            cur_message = data.iloc[index]["message"]
+            turn_historys.append([cur_message])
+            knowledge_contexts.append([cur_knowledge])
+
+        return reference_responses, turn_historys, knowledge_contexts
+
+
 class DSTCDataCollector(DataCollector):
     """
     Collect sample contexts for the DSTC11 Track 5 dataset. Also compatible with DSTC9 Track 1 dataset.
     """
 
-    def __init__(self, dataset_path, dataset_split, dataset_name=None) -> None:
-        super().__init__(dataset_path, dataset_split, dataset_name)
+    def __init__(self, dataset, dataset_split, dataset_name=None) -> None:
+        super().__init__(dataset, dataset_split, dataset_name)
 
     def get_samples_with_target(self, n=-1) -> Tuple[
         List[int], List[str]]:

@@ -35,7 +35,7 @@ class BEGINHumanEvalCollector(HumanEvalCollector):
         # read from human eval path the file wh ich is a tsv file with columns_ id, model_name, data_source, knowledge_message, response, begin_label
         self.human_eval = pd.read_csv(human_eval_path, sep='\t')
 
-    def extract_ratings(self, sample_indices, human_dims=["attributability"]):
+    def extract_ratings(self, sample_indices, human_dims=["attributability"], numeric=True):
         ratings = []
         human_evals = self.human_eval
 
@@ -48,7 +48,16 @@ class BEGINHumanEvalCollector(HumanEvalCollector):
             else:
                 raise ValueError("No human ratings for sample {}".format(sample_index))
 
-        # TODO Convert to numeric ratings
+        if numeric:
+            for rating in ratings:
+                if rating["attributability"] == "Not fully attributable":
+                    rating["attributability"] = 0
+                elif rating["attributability"] == "Generic":
+                    rating["attributability"] = 1
+                elif rating["attributability"] == "Fully attributable":
+                    rating["attributability"] = 2
+                else:
+                    raise ValueError("Attributability value not recognized")
         return ratings
 
 

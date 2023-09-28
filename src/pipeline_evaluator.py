@@ -34,7 +34,7 @@ class PipelineEvaluator:
             self.correlation_level = 'system'
             raise NotImplementedError("System-level correlation is not implemented yet.")
 
-    def run_pipeline(self, model_responses, response_indices):
+    def run_pipeline(self, model_responses, response_indices, dataset_task_description=""):
         reference_responses = None
 
         # Here we filter model responses to only include response for which we have human evaluations
@@ -44,13 +44,13 @@ class PipelineEvaluator:
         if self.desired_framework.reference_required and reference_responses is None:
             raise ValueError("Reference responses are required for the selected evaluation framework.")
 
-        self.framework_scores = self._evaluate_framework(cleaned_model_responses, reference_responses, turn_historys, knowledge_contexts)
+        self.framework_scores = self._evaluate_framework(cleaned_model_responses, reference_responses, turn_historys, knowledge_contexts, dataset_task_description)
         human_scores = self.eval_collector.extract_ratings(eval_response_indices, self.dimension_map.values())
         human_framework_correlations = self._compute_correlations(self.framework_scores, human_scores, self.dimension_map)
 
         return human_framework_correlations
 
-    def _evaluate_framework(self, model_responses, reference_responses, turn_historys, knowledge_contexts):
+    def _evaluate_framework(self, model_responses, reference_responses, turn_historys, knowledge_contexts, dataset_task_description=""):
         """
         Evaluate the model responses using the desired evaluation framework.
         This function should use persistent storage to save the evaluation results.
@@ -73,7 +73,7 @@ class PipelineEvaluator:
             # Prepare model responses
             specific_responses = [resp[self.model_candidates[0]] for resp in model_responses]
             framework_scores = self.desired_framework.evaluate(specific_responses, reference_responses,
-                                                           turn_historys, knowledge_contexts, self.desired_dimensions)
+                                                           turn_historys, knowledge_contexts, self.desired_dimensions, dataset_task_description)
             with open(score_path, "w") as write_file:
                 json.dump(framework_scores, write_file)
         return framework_scores
