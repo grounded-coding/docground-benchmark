@@ -44,6 +44,7 @@ class BEGINHumanEvalCollector(HumanEvalCollector):
                 rating = {}
                 # get the entry in column begin_label
                 rating["attributability"] = human_evals.iloc[sample_index]["begin_label"]
+                ratings.append(rating)
             else:
                 raise ValueError("No human ratings for sample {}".format(sample_index))
 

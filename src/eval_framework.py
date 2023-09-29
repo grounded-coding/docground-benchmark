@@ -113,6 +113,7 @@ class BLEU(EvaluationFramework):
     def evaluate(self, model_responses, reference_responses, turn_historys, knowledge_contexts, dims, dataset_task_description=""):
         bleu_metric = BleuMetric()
         scores = []
+        assert len(model_responses) == len(reference_responses)
         for response, reference in zip(model_responses, reference_responses):
             assert isinstance(response, str)
             score = {}
@@ -124,6 +125,28 @@ class BLEU(EvaluationFramework):
                     score[dim] = sentence_bleu([reference.split()], response.split(), weights=(1, 0, 0, 0))
             scores.append(score)
         return scores
+
+
+class KnowledgeBLEU(EvaluationFramework):
+    def __init__(self):
+        super().__init__(['knowledge-bleu-4', 'knowledge-bleu-1'], reference_required=False)
+
+    def evaluate(self, model_responses, reference_responses, turn_historys, knowledge_contexts, dims, dataset_task_description=""):
+        bleu_metric = BleuMetric()
+        scores = []
+        assert len(model_responses) == len(knowledge_contexts)
+        for response, references in zip(model_responses, knowledge_contexts):
+            assert isinstance(response, str)
+            score = {}
+            for dim in dims:
+                if dim == "bleu-4":
+                    score[dim] = np.mean([bleu_metric.evaluate_example(response, reference)['bleu'] for reference in references])
+                else:
+                    # bleu-1
+                    score[dim] = np.mean([sentence_bleu([reference.split()], response.split(), weights=(1, 0, 0, 0)) for reference in references])
+            scores.append(score)
+        return scores
+
 
 
 class METEOR(EvaluationFramework):

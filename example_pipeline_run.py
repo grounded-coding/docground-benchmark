@@ -1,6 +1,6 @@
 from src.data_collector import DSTCDataCollector, DummyDataCollector, BEGINDataCollector
 from src.pipeline_evaluator import PipelineEvaluator
-from src.eval_framework import DummyEval, LLEval, KnowledgeF1, BLEU, UniEval
+from src.eval_framework import DummyEval, LLEval, KnowledgeF1, BLEU, UniEval, KnowledgeBLEU
 from src.eval_collector import DummyEvalCollector, DSTCHumanEvalCollector, BEGINHumanEvalCollector
 import json
 from utils.file_processing import load_data
@@ -13,11 +13,13 @@ unieval = UniEval()
 unieval_dimensions = ["groundedness"]
 lleval = LLEval()
 lleval_dimensions = ["accurate"]
+bleu = KnowledgeBLEU()
+bleu_dimensions = ["knowledge-bleu-4"]
 kf1 = KnowledgeF1()
 kf1_dimensions = ["knowledge-f1"]
 model_candidates = ['baseline']
 
-for framework, framework_dimensions in [(unieval, unieval_dimensions), (kf1, kf1_dimensions)]:
+for framework, framework_dimensions in [(unieval, unieval_dimensions), (kf1, kf1_dimensions), (bleu, bleu_dimensions)]:
     ## BEGIN CMU DoG
 
     framework_to_human_dimension_map = {framework_dimensions[0]: "attributability"}
@@ -50,5 +52,5 @@ for framework, framework_dimensions in [(unieval, unieval_dimensions), (kf1, kf1
     model_responses = data_collector.get_pred_responses(response_indices, model_candidates, baseline_pred_path)
 
     eval_collector = DSTCHumanEvalCollector(human_eval_path=baseline_human_eval)
-    pipeline_evaluator = PipelineEvaluator(lleval, eval_collector, data_collector, lleval_dimensions, framework_to_human_dimension_map, type, correlation_level, model_candidates)
+    pipeline_evaluator = PipelineEvaluator(framework, eval_collector, data_collector, framework_dimensions, framework_to_human_dimension_map, type, correlation_level, model_candidates)
     human_framework_correlations = pipeline_evaluator.run_pipeline(model_responses, response_indices, dataset_task_description='Context can be reviews from customers or FAQs. FAQs start after token :F: and each new review starts after token :R:.')
