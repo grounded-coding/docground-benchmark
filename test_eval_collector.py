@@ -1,34 +1,27 @@
 import glob
 import numpy as np
-from src.eval_collector import DSTCHumanEvalCollector
+from src.eval_collector import DSTCHumanEvalCollector, BEGINHumanEvalCollector
+import unittest
 
 
-# Search for files ending with "human_eval.json" in all subfolders
-human_eval_paths = glob.glob("../dstc11-track5/results/results_dstc9/*/*human_eval.json", recursive=True)
-print(human_eval_paths)
+# Unittest for DSTCHumanEvalCollector
 
-system_ratings = []
-sample_indices = [7]
-for (sys_id, human_path) in enumerate(human_eval_paths):
-    dstc_collector = DSTCHumanEvalCollector(human_path)
-    human_rating = dstc_collector.extract_ratings(sample_indices, human_dims=["accuracy", "appropriateness"])
-    # system_ratings should look like this
-    # [ [0.7, 0.6], [0.8, 0.9], ... ]
-    # where each entry is the average of the human ratings for each dimension
-    
-    # First, filter out all None entries
-    human_ratings = [rating for rating in human_rating if rating is not None]
-    # Second, average the ratings for each dimension
+class TestEvalCollector(unittest.TestCase):
+    def setUp(self):
+        self.dstc_eval_path = "tests/static/entry0.human_eval.json"
+        self.begin_eval_path = "tests/static/begin_dev_cmu.tsv"
+        self.dstc_eval_collector = DSTCHumanEvalCollector(self.dstc_eval_path)
+        self.begin_eval_collector = BEGINHumanEvalCollector(self.begin_eval_path)
 
-    numeric_ratings = []
-    for rating in human_ratings:
-        numeric_entry = []
-        for dim in rating:
-            numeric_entry.append(np.mean(rating[dim]))
-        numeric_ratings.append(numeric_entry)
-    
-    system_ratings.append(numeric_ratings)
+    def test_extract_ratings(self):
+        sample_indices = [7, 18]
+        human_rating_1 = self.dstc_eval_collector.extract_ratings(sample_indices, human_dims=["accuracy", "appropriateness"])
+        self.assertEqual(len(human_rating_1), len(sample_indices))
 
-system_ratings = np.stack(system_ratings, axis=0)
+        sample_indices = [7, 13, 14, 15, 16]
+        human_rating_2 = self.begin_eval_collector.extract_ratings(sample_indices, human_dims=["accuracy", "appropriateness"])
+        self.assertEqual(len(human_rating_2), len(sample_indices))
 
-print(system_ratings)
+
+if __name__ == '__main__':
+    unittest.main()

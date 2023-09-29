@@ -35,7 +35,7 @@ class PipelineEvaluator:
             raise NotImplementedError("System-level correlation is not implemented yet.")
 
     def _load_scores_from_storage(self):
-        score_path = Path(self.data_collector.get_name()) / self.data_collector.dataset_split / self.model_candidates[0] \
+        score_path = Path("outputs") / self.data_collector.get_name() / self.data_collector.dataset_split / self.model_candidates[0] \
                      / (self.desired_framework.get_name() + ".json")
         if score_path.is_file():
             with open(score_path, "r") as read_file:
@@ -47,7 +47,7 @@ class PipelineEvaluator:
         return framework_scores
 
     def _write_scores_to_storage(self, framework_scores):
-        score_path = Path(self.data_collector.get_name()) / self.data_collector.dataset_split / self.model_candidates[0] \
+        score_path = Path("outputs") / self.data_collector.get_name() / self.data_collector.dataset_split / self.model_candidates[0] \
                 / (self.desired_framework.get_name() + ".json")
         with open(score_path, "w") as write_file:
             json.dump(framework_scores, write_file)

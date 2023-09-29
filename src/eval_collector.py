@@ -44,8 +44,6 @@ class BEGINHumanEvalCollector(HumanEvalCollector):
                 rating = {}
                 # get the entry in column begin_label
                 rating["attributability"] = human_evals.iloc[sample_index]["begin_label"]
-                if rating["attributability"] != "Generic":
-                    ratings.append(rating)
             else:
                 raise ValueError("No human ratings for sample {}".format(sample_index))
 
@@ -91,7 +89,7 @@ class DSTCHumanEvalCollector(HumanEvalCollector):
             else:
                 raise ValueError("No human ratings for sample {}".format(sample_index))
 
-        print("Candidate has received {} valid ratings".format(valid_rating))            
+        # print("Candidate has received {} valid ratings".format(valid_rating))            
         return ratings
 
     def get_subset_with_human_eval(self, sample_indices, candidate_responses):

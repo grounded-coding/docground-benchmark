@@ -51,7 +51,7 @@ class BEGINDataCollector(DataCollector):
     def __init__(self, dataset_path, dataset_split, dataset_name=None) -> None:
         super().__init__(dataset_path, dataset_split, dataset_name)
 
-    def get_samples_with_target(self, n=-1) -> Tuple[
+    def get_samples_with_target(self, n=-1, generic=True) -> Tuple[
         List[int], List[str]]:
         """
         Get all samples with target set to True.
@@ -65,7 +65,7 @@ class BEGINDataCollector(DataCollector):
         j = 0
         data = pd.read_csv(f'{self.dataset}/begin_{self.dataset_split}_{self.dataset_name}.tsv', sep='\t')
         for i in range(len(data)):
-            if data.iloc[i]["response"] is not None:
+            if data.iloc[i]["response"] is not None and not (generic and data.iloc[i]["begin_label"] == "Generic"):
                 candidate_responses.append(data.iloc[i]["response"])
                 sample_indices.append(i)
                 j += 1
