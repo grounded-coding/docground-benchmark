@@ -4,10 +4,10 @@ from src.data_collector import DataCollector, BEGINDataCollector, DSTCDataCollec
 from src.eval_collector import BEGINHumanEvalCollector, DSTCHumanEvalCollector
 
 human_dim = "attributability"
-framework_dim = "accurate"
+framework_dim = "groundedness"
 
 # Replace this with the path to your evaluation file
-evaluation_file = "outputs/tc/dev/baseline/LLEval.json"
+evaluation_file = "outputs/tc/dev/baseline/UniEval.json"
 
 # Replace these with your disjunctive sets of indices
 begin = BEGINDataCollector(dataset_path="../BEGIN-dataset/topicalchat", dataset_split="dev", dataset_name="tc")
@@ -32,7 +32,7 @@ for index_set in index_sets:
             if entry["response_index"] == index:
                 accur_set.append(entry[framework_dim])
     accur_scores.append(accur_set)
-    
+
 # Create the boxplots
 fig, axes = plt.subplots(1, len(index_sets), sharey=True)
 colors = ['blue', 'green', 'red']
@@ -45,4 +45,4 @@ for i, (accur_set, ax, color) in enumerate(zip(accur_scores, axes, colors)):
 
 # save the plot
 # high dpi
-plt.savefig("outputs/tc/dev/baseline/lleval_boxplot.png", dpi=300)
+plt.savefig("outputs/tc/dev/baseline/unieval_boxplot.png", dpi=300)

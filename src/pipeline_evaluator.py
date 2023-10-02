@@ -78,6 +78,9 @@ class PipelineEvaluator:
 
         # Load the scores from storage if they are already available
         existing_framework_scores = self._load_scores_from_storage()
+
+        # TODO Response_index value might not correspond to loaded index when we are iteratively evaluating parts of the data, must be FIXED
+
         # Filter for the subset of responses by response_indices
         existing_framework_scores = [score for score in existing_framework_scores if score["response_index"] in response_indices]
 
