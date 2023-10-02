@@ -47,7 +47,7 @@ for framework, framework_dimensions in [(lleval, lleval_dimensions), (unieval, u
     baseline_pred_path = "../dstc11-track5/results/results_dstc9/baseline/entry0.json"
     baseline_human_eval = "../dstc11-track5/results/results_dstc9/baseline/entry0.human_eval.json"
 
-    data_collector = DSTCDataCollector(dataset="../dstc11-track5/data/dstc9", dataset_split="test", dataset_name="dstc9")
+    data_collector = DSTCDataCollector(dataset_path="../dstc11-track5/data/dstc9", dataset_split="test", dataset_name="dstc9")
     response_indices = data_collector.get_samples_with_target(n=-1)
     model_responses = data_collector.get_pred_responses(response_indices, model_candidates, baseline_pred_path)
 

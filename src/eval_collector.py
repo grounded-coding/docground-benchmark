@@ -17,6 +17,13 @@ class HumanEvalCollector(ABC):
     def get_subset_with_human_eval(self, sample_indices, model_responses):
         return sample_indices, model_responses
 
+    def get_index_sets_disjunctive(self, human_ratings, human_dim):
+        sets = [[i for i, rating in enumerate(human_ratings) if rating[human_dim] <= 0.3],
+                [i for i, rating in enumerate(human_ratings) if rating[human_dim] <= 0.7 and rating[human_dim] > 0.3],
+                [i for i, rating in enumerate(human_ratings) if rating[human_dim] > 0.7]]
+        return sets
+
+
 class DummyEvalCollector(HumanEvalCollector):    
 
     def extract_ratings(self, sample_indices, human_dims=None):
@@ -59,6 +66,13 @@ class BEGINHumanEvalCollector(HumanEvalCollector):
                 else:
                     raise ValueError("Attributability value not recognized")
         return ratings
+
+    def get_index_sets_disjunctive(self, human_ratings, human_dim):
+        sets = [[i for i, rating in enumerate(human_ratings) if rating[human_dim] == 0],
+                [i for i, rating in enumerate(human_ratings) if rating[human_dim] == 1],
+                [i for i, rating in enumerate(human_ratings) if rating[human_dim] == 2]]
+
+        return sets
 
 
 class DSTCHumanEvalCollector(HumanEvalCollector):
@@ -105,3 +119,9 @@ class DSTCHumanEvalCollector(HumanEvalCollector):
                 if candidate_responses is not None:
                     model_responses.append(candidate_responses[j])
         return human_eval_indices, model_responses
+
+    def get_index_sets_disjunctive(self, human_ratings, human_dim):
+        sets = [[i for i, rating in enumerate(human_ratings) if rating[human_dim] <= 2],
+                [i for i, rating in enumerate(human_ratings) if rating[human_dim] == 3],
+                [i for i, rating in enumerate(human_ratings) if rating[human_dim] >= 4]]
+        return sets

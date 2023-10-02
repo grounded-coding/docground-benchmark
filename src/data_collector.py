@@ -109,8 +109,8 @@ class DSTCDataCollector(DataCollector):
     Collect sample contexts for the DSTC11 Track 5 dataset. Also compatible with DSTC9 Track 1 dataset.
     """
 
-    def __init__(self, dataset, dataset_split, dataset_name=None) -> None:
-        super().__init__(dataset, dataset_split, dataset_name)
+    def __init__(self, dataset_path, dataset_split, dataset_name=None) -> None:
+        super().__init__(dataset_path, dataset_split, dataset_name)
 
     def get_samples_with_target(self, n=-1) -> Tuple[
         List[int], List[str]]:
