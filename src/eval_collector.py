@@ -93,7 +93,7 @@ class DSTCHumanEvalCollector(HumanEvalCollector):
         # print("Candidate has received {} valid ratings".format(valid_rating))            
         return ratings
 
-    def get_subset_with_human_eval(self, sample_indices, candidate_responses):
+    def get_subset_with_human_eval(self, sample_indices, candidate_responses=None):
         """
         Provided with a list of indices that contain responses for the chosen dataset, this function returns a subset of indices that have human ratings"""
         human_eval_indices = []
@@ -102,5 +102,6 @@ class DSTCHumanEvalCollector(HumanEvalCollector):
         for j, index in enumerate(sample_indices):
             if human_evals[index] is not None:
                 human_eval_indices.append(index)
-                model_responses.append(candidate_responses[j])
+                if candidate_responses is not None:
+                    model_responses.append(candidate_responses[j])
         return human_eval_indices, model_responses

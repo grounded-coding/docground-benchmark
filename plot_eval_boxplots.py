@@ -1,21 +1,22 @@
 import json
 import matplotlib.pyplot as plt
-from src.data_collector import DataCollector, BEGINDataCollector
-from src.eval_collector import BEGINHumanEvalCollector
+from src.data_collector import DataCollector, BEGINDataCollector, DSTCDataCollector
+from src.eval_collector import BEGINHumanEvalCollector, DSTCHumanEvalCollector
 
 # Replace this with the path to your evaluation file
-evaluation_file = "outputs/tc/dev/baseline/UniEval.json"
+evaluation_file = "outputs/dstc9/test/baseline/UniEval.json"
 
 # Replace these with your disjunctive sets of indices
-begin = BEGINDataCollector(dataset_path="../BEGIN-dataset/topicalchat", dataset_split="dev", dataset_name="tc")
+begin = DSTCDataCollector(dataset="../dstc11-track5/data/dstc9", dataset_split="test", dataset_name="dstc9")
 sample_indices = begin.get_samples_with_target()
-begin_eval_collector = BEGINHumanEvalCollector(human_eval_path="../BEGIN-dataset/topicalchat/begin_dev_tc.tsv")
+begin_eval_collector = DSTCHumanEvalCollector(human_eval_path="../dstc11-track5/results/results_dstc9/baseline/entry0.human_eval.json")
+sample_indices, _ = begin_eval_collector.get_subset_with_human_eval(sample_indices)
 human_ratings = begin_eval_collector.extract_ratings(sample_indices)
 
-# Using human_ratings (which range from 0 to 2), divide sample_indices into three sets
-index_sets = [[], [], []]
-for i, rating in enumerate(human_ratings):
-    index_sets[rating["attributability"]].append(i)
+# Using human_ratings (accuracy) which ranges from 1 to 5, we can create 3 disjunctive sets of indices
+index_sets = [[i for i, rating in enumerate(human_ratings) if rating["accuracy"] <= 2],
+                [i for i, rating in enumerate(human_ratings) if rating["accuracy"] == 3],
+                [i for i, rating in enumerate(human_ratings) if rating["accuracy"] >= 4]]
 
 # Load the evaluation data
 with open(evaluation_file, "r") as f:
@@ -36,4 +37,4 @@ for i, (accur_set, ax, color) in enumerate(zip(accur_scores, axes, colors)):
 
 # save the plot
 # high dpi
-plt.savefig("outputs/tc/dev/baseline/boxplot.png", dpi=300)
+plt.savefig("outputs/dstc9/test/baseline/boxplot.png", dpi=300)
