@@ -19,7 +19,7 @@ kf1 = KnowledgeF1()
 kf1_dimensions = ["knowledge-f1"]
 model_candidates = ['baseline']
 
-for framework, framework_dimensions in [(unieval, unieval_dimensions), (kf1, kf1_dimensions), (bleu, bleu_dimensions)]:
+for framework, framework_dimensions in [(lleval, lleval_dimensions), (unieval, unieval_dimensions), (kf1, kf1_dimensions), (bleu, bleu_dimensions)]:
     ## BEGIN CMU DoG
 
     framework_to_human_dimension_map = {framework_dimensions[0]: "attributability"}
