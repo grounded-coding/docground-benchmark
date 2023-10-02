@@ -68,11 +68,9 @@ class PipelineEvaluator:
 
         return new_response_indices, model_responses, reference_responses, turn_historys, knowledge_contexts
 
-    def run_pipeline(self, model_responses, response_indices, dataset_task_description="", print_statements=True):
+    def run_pipeline(self, model_responses, response_indices, dataset_task_description="", print_statements=True, exclude_rating=None):
         reference_responses = None
-
-        # Here we filter model responses to only include response for which we have human evaluations
-        response_indices, model_responses = self.eval_collector.get_subset_with_human_eval(response_indices, model_responses)
+        response_indices, model_responses = self.eval_collector.get_subset_with_human_eval(response_indices, model_responses, exclude_rating=exclude_rating)
         reference_responses, turn_historys, knowledge_contexts = self.data_collector.collect_sample_contexts(response_indices)
 
         if self.desired_framework.reference_required and reference_responses is None:
