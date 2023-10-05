@@ -1,0 +1,8 @@
+{
+    "init_prompt": "[INST] <<SYS>> ",
+    "task_prompt": "For the following multi-turn conversation between User and Assistant, you will be given a potential response for the next turn.",
+    "context_prompt": "<</SYS>> {}",
+    "candidate_prompt": "## Response\n{}",
+    "eval_prompt": "## Task\nFIRST provide a one-sentence explanation of your rating. SECOND, state only state only the score on a scale of 1 to 5. Follow the template.\n\n## Template\nExplanation: <one-sentence explanation>\n{} Score: <1-5>",
+    "post_prompt": "[/INST]Explanation:"
+}

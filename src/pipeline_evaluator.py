@@ -68,10 +68,21 @@ class PipelineEvaluator:
 
         return new_response_indices, model_responses, reference_responses, turn_historys, knowledge_contexts
 
-    def run_pipeline(self, model_responses, response_indices, dataset_task_description="", print_statements=True, exclude_rating=None):
+    def run_pipeline(self, model_responses, response_indices, dataset_task_description="", print_statements=True, exclude_rating=None, verbose=False):
         reference_responses = None
         response_indices, model_responses = self.eval_collector.get_subset_with_human_eval(response_indices, model_responses, exclude_rating=exclude_rating)
         reference_responses, turn_historys, knowledge_contexts = self.data_collector.collect_sample_contexts(response_indices)
+
+        # For the first 10 samples, print the sample index, reference response, turn history and knowledge context in a readable coherent format
+        if verbose:
+            print("--- Sample contexts ---")
+            for i in range(10):
+                print("Sample index: {}".format(response_indices[i]))
+                print("Reference response: {}".format(reference_responses[i]))
+                print("Model response: {}".format(model_responses[i]))
+                print("Turn history: {}".format(turn_historys[i]))
+                print("Knowledge context: {}".format(knowledge_contexts[i]))
+                print("-------------------------\n")
 
         if self.desired_framework.reference_required and reference_responses is None:
             raise ValueError("Reference responses are required for the selected evaluation framework.")
@@ -91,7 +102,15 @@ class PipelineEvaluator:
         self._write_scores_to_storage(framework_scores)
 
         human_scores = self.eval_collector.extract_ratings(response_indices, self.dimension_map.values())
+        # Print the first 10 response indices, human scores and framework scores
+        if print_statements:
+            print("--- Sample responses ---")
+            print("Response indices: {}".format(response_indices[:10]))
+            print("Human scores: {}".format(human_scores[:10]))
+            print("Framework scores: {}".format(framework_scores[:10]))
+            print("-------------------------\n")
         human_framework_correlations = self._compute_correlations(framework_scores, human_scores, self.dimension_map)
+
 
         if print_statements:
             print("--- Computed correlations ---")

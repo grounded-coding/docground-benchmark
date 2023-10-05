@@ -1,0 +1,4 @@
+{
+    "gen_params": {"max_new_tokens":256, "do_sample": true, "temperature": 0.95, "top_p": 0.95, "top_k": 250}
+}
+  

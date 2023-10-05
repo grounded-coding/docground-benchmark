@@ -9,11 +9,25 @@ import re
 
 
 def extract_turns(text):
-    if not isinstance(text, str):
-        return []
-    pattern = r'<p>(?:USER|AGENT):\s+(.*?)<\/p>'
-    turns = re.findall(pattern, text)
-    return turns
+    pattern = r'<p>(USER|AGENT):\s+(.*?)<\/p>'
+    turns_raw = re.findall(pattern, text)
+    turns_merged = []
+    current_speaker = None
+    current_turn = ""
+
+    for speaker, turn in turns_raw:
+        if speaker == current_speaker:
+            current_turn += " " + turn
+        else:
+            if current_turn:
+                turns_merged.append(current_turn)
+            current_speaker = speaker
+            current_turn = turn
+
+    if current_turn:
+        turns_merged.append(current_turn)
+
+    return turns_merged
 
 
 class DataCollector(ABC):
@@ -54,6 +68,7 @@ class DataCollector(ABC):
 
     @abstractmethod
     def get_pred_responses(self, sample_indices, model_candidates):
+        # TODO implement proper multiple model candidate selection for all collectors
         pass
 
 
@@ -163,11 +178,12 @@ class DialDocDataCollector(DataCollector):
         data = pd.read_csv(f'{self.dataset}/Batch_383409_batch_results_final.csv', sep=',')
 
         for index in sample_indices:
-            cur_knowledge = data.iloc[index]["Input.grounding_sp"]
+            cur_knowledge = data.iloc[index]["Input.grounding_sec"]
             turn_history = extract_turns(data.iloc[index]["Input.dialogue_history"])
             turn_historys.append(turn_history)
             knowledge_contexts.append([cur_knowledge])
-            reference_responses.append(data.iloc[index]["Input.human_ref"])
+            # Remove "AGENT:" string from the start of the reference
+            reference_responses.append(data.iloc[index]["Input.human_ref"].replace("AGENT: ", ""))
 
         return reference_responses, turn_historys, knowledge_contexts
 
@@ -240,7 +256,6 @@ class DSTCDataCollector(DataCollector):
             # Generate sentences from knowledge.json
             sentences = []
             current_doc_id = None
-            current_entity_id = None
             dstc9_map = False
             n_sent = 0
 

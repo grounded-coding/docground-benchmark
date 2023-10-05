@@ -30,7 +30,7 @@ class EvaluationFramework(ABC):
 
 class UniEval(EvaluationFramework):
     def __init__(self):
-        super().__init__(['groundedness', 'informativeness', 'fluency', 'engagingness', 'overall'])
+        super().__init__(['naturalness', 'coherence', 'groundedness', 'understandability', 'overall'])
 
     def evaluate(self, model_responses, reference_responses, turn_historys, knowledge_contexts, dims, dataset_task_description=""):
         # knowledge_contexts is a list of lists of strings. for unieval these documents are concatenated and joined by a newline separator
@@ -64,13 +64,17 @@ class LLEval(EvaluationFramework):
 
     def evaluate(self, model_responses, reference_responses, turn_historys, knowledge_contexts, dims, dataset_task_description=""):
         data = convert_to_json(output_list=model_responses, src_list=turn_historys, context_list=knowledge_contexts)
-        prompt_template = PromptTemplate()
-        llama2local = PromptScorer(api_url="http://gpu-19.apptek.local:8080/generate", metric_config_file="configs/lleval_likert_config.json", prompt_template=prompt_template, num_retries=3)
+        prompt_template = PromptTemplate("configs/prompt_likert_config.json")
+        llama2local = PromptScorer(api_url="http://gpu-19.apptek.local:8080/generate", metric_config_file="configs/gen_config.json", prompt_template=prompt_template, num_retries=3)
         evaluator = DialogEvaluator(llama2local, dataset_task_description=dataset_task_description)
         eval_scores, eval_expls = evaluator.evaluate(data, print_result=True, dims=dims)
-        # print(eval_expls)
-        return eval_scores
-
+        merged_scores = []
+        for i, score in enumerate(eval_scores):
+            for key in eval_expls[i].keys():
+                score[key + "_expl"] = eval_expls[i][key]
+            merged_scores.append(score)
+        return merged_scores
+    
 
 class KnowledgeF1(EvaluationFramework):
     def __init__(self):
