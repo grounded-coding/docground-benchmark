@@ -34,8 +34,8 @@ class PipelineEvaluator:
             self.correlation_level = 'system'
             raise NotImplementedError("System-level correlation is not implemented yet.")
 
-    def _load_scores_from_storage(self):
-        score_path = Path("outputs") / self.data_collector.get_name() / self.data_collector.dataset_split / self.model_candidates[0] \
+    def _load_scores_from_storage(self, model=""):
+        score_path = Path("outputs") / self.data_collector.get_name() / self.data_collector.dataset_split / model \
                      / (self.desired_framework.get_name() + ".json")
         if score_path.is_file():
             with open(score_path, "r") as read_file:
@@ -46,20 +46,25 @@ class PipelineEvaluator:
         score_path.parent.mkdir(parents=True, exist_ok=True)
         return framework_scores
 
-    def _write_scores_to_storage(self, framework_scores):
-        score_path = Path("outputs") / self.data_collector.get_name() / self.data_collector.dataset_split / self.model_candidates[0] \
+    def _write_scores_to_storage(self, framework_scores, model=""):
+        score_path = Path("outputs") / self.data_collector.get_name() / self.data_collector.dataset_split / model \
                 / (self.desired_framework.get_name() + ".json")
         with open(score_path, "w") as write_file:
             json.dump(framework_scores, write_file)
 
     def get_new_contexts_only(self, existing_framework_scores, response_indices, reference_responses, turn_historys, knowledge_contexts, model_responses):
+        """
+        Filters response indices, model responses, reference responses, turn historys and knowledge contexts for some model to only those that havent been evaluated yet.
+        """
         new_response_indices = []
         reference_responses = []
         for i, response_index in enumerate(response_indices):
-            if not any(score["response_index"] == response_index for score in existing_framework_scores):
-                new_response_indices.append(response_index)
+            # if for any dimension that we are evaluating the score is not available yet for this sample, we also need to evaluate again
+            for dim in self.desired_dimensions:
+                if not any(score["response_index"] == response_index and dim in score for score in existing_framework_scores):
+                    new_response_indices.append(response_index)
+                    break
         
-        # Get the model responses for the new response indices
         model_responses = [model_responses[i] for i in range(len(response_indices)) if response_indices[i] in new_response_indices]
         if len(reference_responses) > 0:
             reference_responses = [reference_responses[i] for i in range(len(response_indices)) if response_indices[i] in new_response_indices]
@@ -72,60 +77,61 @@ class PipelineEvaluator:
         reference_responses = None
         response_indices, model_responses = self.eval_collector.get_subset_with_human_eval(response_indices, model_responses, exclude_rating=exclude_rating)
         reference_responses, turn_historys, knowledge_contexts = self.data_collector.collect_sample_contexts(response_indices)
+        all_human_framework_correlations = []
 
-        # For the first 10 samples, print the sample index, reference response, turn history and knowledge context in a readable coherent format
-        if verbose:
-            print("--- Sample contexts ---")
-            for i in range(10):
-                print("Sample index: {}".format(response_indices[i]))
-                print("Reference response: {}".format(reference_responses[i]))
-                print("Model response: {}".format(model_responses[i]))
-                print("Turn history: {}".format(turn_historys[i]))
-                print("Knowledge context: {}".format(knowledge_contexts[i]))
+        for model in self.model_candidates:
+            if verbose:
+                print("--- Sample contexts ---")
+                for i in range(10):
+                    print("Sample index: {}".format(response_indices[i]))
+                    print("Reference response: {}".format(reference_responses[i]))
+                    print("Model response: {}".format(model_responses[i][model]))
+                    print("Turn history: {}".format(turn_historys[i]))
+                    print("Knowledge context: {}".format(knowledge_contexts[i]))
+                    print("-------------------------\n")
+
+            if self.desired_framework.reference_required and reference_responses is None:
+                raise ValueError("Reference responses are required for the selected evaluation framework.")
+            existing_framework_scores = self._load_scores_from_storage(model)
+
+            # TODO Response_index value might not correspond to loaded index when we are iteratively evaluating parts of the data, must be FIXED
+
+            # Filter for the subset of responses by response_indices
+            existing_framework_scores = [score for score in existing_framework_scores if score["response_index"] in response_indices]
+
+            new_response_indices, new_model_responses, new_reference_responses, new_turn_historys, new_knowledge_contexts = self.get_new_contexts_only(existing_framework_scores, response_indices, reference_responses, turn_historys, knowledge_contexts, model_responses)
+
+            new_framework_scores = self._evaluate_framework(new_model_responses, new_response_indices, new_reference_responses, new_turn_historys, new_knowledge_contexts, dataset_task_description, model)
+            # TODO Fix the merging here for different dimensions
+            framework_scores = existing_framework_scores + new_framework_scores
+            self._write_scores_to_storage(framework_scores, model)
+
+            human_scores = self.eval_collector.extract_ratings(response_indices, self.dimension_map.values())
+            if print_statements:
+                print("--- Sample responses ---")
+                print("Response indices: {}".format(response_indices[:10]))
+                print("Human scores: {}".format(human_scores[:10]))
+                print("Framework scores: {}".format(framework_scores[:10]))
                 print("-------------------------\n")
 
-        if self.desired_framework.reference_required and reference_responses is None:
-            raise ValueError("Reference responses are required for the selected evaluation framework.")
+            human_framework_correlations = self._compute_correlations(framework_scores, human_scores, self.dimension_map)
 
-        # Load the scores from storage if they are already available
-        existing_framework_scores = self._load_scores_from_storage()
+            if print_statements:
+                print("--- Computed correlations ---")
+                print("Dataset: {}".format(self.data_collector.get_name()))
+                print("Split: {}".format(self.data_collector.dataset_split))
+                print("Model: {}".format(model))
+                print("Framework: {}".format(self.desired_framework.get_name()))
+                print("Correlation type: {}".format(self.correlation_score))
+                print("Correlation level: {}".format(self.correlation_level))
+                print(human_framework_correlations)
+                print("-----------------------------\n")
 
-        # TODO Response_index value might not correspond to loaded index when we are iteratively evaluating parts of the data, must be FIXED
+            all_human_framework_correlations.append(human_framework_correlations)
 
-        # Filter for the subset of responses by response_indices
-        existing_framework_scores = [score for score in existing_framework_scores if score["response_index"] in response_indices]
+        return all_human_framework_correlations
 
-        new_response_indices, model_responses, reference_responses, turn_historys, knowledge_contexts = self.get_new_contexts_only(existing_framework_scores, response_indices, reference_responses, turn_historys, knowledge_contexts, model_responses)
-
-        new_framework_scores = self._evaluate_framework(model_responses, new_response_indices, reference_responses, turn_historys, knowledge_contexts, dataset_task_description)
-        framework_scores = existing_framework_scores + new_framework_scores
-        self._write_scores_to_storage(framework_scores)
-
-        human_scores = self.eval_collector.extract_ratings(response_indices, self.dimension_map.values())
-        # Print the first 10 response indices, human scores and framework scores
-        if print_statements:
-            print("--- Sample responses ---")
-            print("Response indices: {}".format(response_indices[:10]))
-            print("Human scores: {}".format(human_scores[:10]))
-            print("Framework scores: {}".format(framework_scores[:10]))
-            print("-------------------------\n")
-        human_framework_correlations = self._compute_correlations(framework_scores, human_scores, self.dimension_map)
-
-
-        if print_statements:
-            print("--- Computed correlations ---")
-            print("Dataset: {}".format(self.data_collector.get_name()))
-            print("Split: {}".format(self.data_collector.dataset_split))
-            print("Model: {}".format(self.model_candidates[0]))
-            print("Framework: {}".format(self.desired_framework.get_name()))
-            print("Correlation type: {}".format(self.correlation_score))
-            print("Correlation level: {}".format(self.correlation_level))
-            print(human_framework_correlations)
-            print("-----------------------------\n")
-
-        return human_framework_correlations
-
-    def _evaluate_framework(self, model_responses, response_indices, reference_responses, turn_historys, knowledge_contexts, dataset_task_description=""):
+    def _evaluate_framework(self, model_responses, response_indices, reference_responses, turn_historys, knowledge_contexts, dataset_task_description="", model=""):
         """
         Evaluate the model responses using the desired evaluation framework.
         This function should use persistent storage to save the evaluation results.
@@ -139,7 +145,7 @@ class PipelineEvaluator:
         :return: A list of evaluation scores for each data sample
         """
         if len(model_responses) > 0:
-            model_responses = [resp[self.model_candidates[0]] for resp in model_responses]
+            model_responses = [resp[model] for resp in model_responses]
             new_framework_scores = self.desired_framework.evaluate(model_responses, reference_responses,
                                                             turn_historys, knowledge_contexts, self.desired_dimensions, dataset_task_description)
             # Add the response indices to the scores so that we can identify the samples later
