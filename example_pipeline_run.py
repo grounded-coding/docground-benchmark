@@ -1,7 +1,7 @@
-from src.data_collector import DSTCDataCollector, DummyDataCollector, BEGINDataCollector
+from src.data_collector import DSTCDataCollector, DummyDataCollector, BEGINDataCollector, DialDocDataCollector
 from src.pipeline_evaluator import PipelineEvaluator
 from src.eval_framework import DummyEval, LLEval, KnowledgeF1, BLEU, UniEval, KnowledgeBLEU
-from src.eval_collector import DummyEvalCollector, DSTCHumanEvalCollector, BEGINHumanEvalCollector
+from src.eval_collector import DummyEvalCollector, DSTCHumanEvalCollector, BEGINHumanEvalCollector, DialDocEvalCollector
 import json
 from utils.file_processing import load_data
 from typing import List, Dict
@@ -55,3 +55,14 @@ for framework, framework_dimensions in [(lleval, lleval_dimensions), (unieval, u
     eval_collector = DSTCHumanEvalCollector(human_eval_path=baseline_human_eval)
     pipeline_evaluator = PipelineEvaluator(framework, eval_collector, dstc_collector, framework_dimensions, framework_to_human_dimension_map, type, correlation_level, model_candidates)
     human_framework_correlations = pipeline_evaluator.run_pipeline(model_responses, response_indices, dataset_task_description='Context can be reviews from customers or FAQs. FAQs start after token :F: and each new review starts after token :R:.')
+
+    ## DialDoc
+
+    dialdoc_collector = DialDocDataCollector("../DialDoc-TU2023")
+    response_indices = dialdoc_collector.get_samples_with_target(n=-1)
+    model_responses = dialdoc_collector.get_pred_responses(response_indices, model_candidates)
+
+    framework_to_human_dimension_map = {framework_dimensions[0]: "groundedness"}
+    dialdoc_eval_collector = DialDocEvalCollector("../DialDoc-TU2023/Batch_383409_batch_results_final.csv")
+    pipeline_evaluator = PipelineEvaluator(framework, dialdoc_eval_collector, dialdoc_collector, framework_dimensions, framework_to_human_dimension_map, type, correlation_level, model_candidates)
+    human_framework_correlations = pipeline_evaluator.run_pipeline(model_responses, response_indices)

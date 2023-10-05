@@ -5,6 +5,15 @@ from itertools import groupby
 from operator import itemgetter
 from utils.file_processing import load_data
 import pandas as pd
+import re
+
+
+def extract_turns(text):
+    if not isinstance(text, str):
+        return []
+    pattern = r'<p>(?:USER|AGENT):\s+(.*?)<\/p>'
+    turns = re.findall(pattern, text)
+    return turns
 
 
 class DataCollector(ABC):
@@ -19,6 +28,18 @@ class DataCollector(ABC):
         return self.dataset_name
 
     @abstractmethod
+    def get_samples_with_target(self, n=-1) -> Tuple[
+        List[int], List[str]]:
+        """
+        Get all samples with target set to True.
+
+        :param dataset_split: The dataset split to use.
+        :param dataset: The dataset to use.
+        :return: A tuple of sample indices and candidate responses.
+        """
+        pass
+
+    @abstractmethod
     def collect_sample_contexts(self, sample_indices: List[int]) -> Tuple[
         List[int], List[List[str]], List[List[str]]]:
         """
@@ -29,6 +50,10 @@ class DataCollector(ABC):
         :param dataset: The dataset to use.
         :return: Three lists - reference_responses, turn_historys, and knowledge_contexts.
         """
+        pass
+
+    @abstractmethod
+    def get_pred_responses(self, sample_indices, model_candidates):
         pass
 
 
@@ -103,6 +128,58 @@ class BEGINDataCollector(DataCollector):
 
         return reference_responses, turn_historys, knowledge_contexts
 
+
+class DialDocDataCollector(DataCollector):
+    """
+    Collect sample contexts for the DialDoc dataset int he format of TU Braunschweig 2023."""
+
+    def __init__(self, dataset_path) -> None:
+        super().__init__(dataset=dataset_path, dataset_split="", dataset_name="dialdoc_tu_2023")
+
+    def get_samples_with_target(self, n=-1):
+        """
+        Get all samples with target set to True.
+
+        :param dataset_split: The dataset split to use.
+        :param dataset: The dataset to use.
+        :return: A tuple of sample indices and candidate responses.
+        """
+        sample_indices = []
+        j = 0
+        data = pd.read_csv(f'{self.dataset}/Batch_383409_batch_results_final.csv', sep=',')
+
+        for i in range(len(data)):
+            if data.iloc[i]["Input.human_ref"] is not None:
+                sample_indices.append(i)
+                j += 1
+            if n > 0 and j >= n:
+                break
+        return sample_indices
+
+    def collect_sample_contexts(self, sample_indices: List[int]) -> Tuple[List[int], List[List[str]], List[List[str]]]:
+        reference_responses = []
+        turn_historys = []
+        knowledge_contexts = []
+        data = pd.read_csv(f'{self.dataset}/Batch_383409_batch_results_final.csv', sep=',')
+
+        for index in sample_indices:
+            cur_knowledge = data.iloc[index]["Input.grounding_sp"]
+            turn_history = extract_turns(data.iloc[index]["Input.dialogue_history"])
+            turn_historys.append(turn_history)
+            knowledge_contexts.append([cur_knowledge])
+            reference_responses.append(data.iloc[index]["Input.human_ref"])
+
+        return reference_responses, turn_historys, knowledge_contexts
+
+    def get_pred_responses(self, sample_indices, model_candidates):
+        # Get response entries as a list for all provided sample indices from pred_data. pred_data is a pandas dataframe with column name response
+        model_responses = []
+        data = pd.read_csv(f'{self.dataset}/Batch_383409_batch_results_final.csv', sep=',')
+        for index in sample_indices:
+            x = data.iloc[index]
+            model_responses.append({model_candidates[0]: x["Input.response_sys"]})
+        return model_responses
+        
 
 class DSTCDataCollector(DataCollector):
     """
