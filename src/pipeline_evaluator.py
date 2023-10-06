@@ -73,7 +73,7 @@ class PipelineEvaluator:
 
         return new_response_indices, model_responses, reference_responses, turn_historys, knowledge_contexts
 
-    def run_pipeline(self, model_responses, response_indices, dataset_task_description="", print_statements=True, exclude_rating=None, verbose=False):
+    def run_pipeline(self, model_responses, response_indices, print_statements=True, exclude_rating=None, verbose=False):
         reference_responses = None
         response_indices, model_responses = self.eval_collector.get_subset_with_human_eval(response_indices, model_responses, exclude_rating=exclude_rating)
         reference_responses, turn_historys, knowledge_contexts = self.data_collector.collect_sample_contexts(response_indices)
@@ -99,7 +99,7 @@ class PipelineEvaluator:
 
             new_response_indices, new_model_responses, new_reference_responses, new_turn_historys, new_knowledge_contexts = self.get_new_contexts_only(existing_framework_scores, response_indices, reference_responses, turn_historys, knowledge_contexts, model_responses)
 
-            new_framework_scores = self._evaluate_framework(new_model_responses, new_response_indices, new_reference_responses, new_turn_historys, new_knowledge_contexts, dataset_task_description, model)
+            new_framework_scores = self._evaluate_framework(new_model_responses, new_response_indices, new_reference_responses, new_turn_historys, new_knowledge_contexts, model)
             framework_scores = self._merge_existing_and_new_scores(existing_framework_scores, new_framework_scores)
             self._write_scores_to_storage(framework_scores, model)
 
@@ -111,7 +111,7 @@ class PipelineEvaluator:
                 print("Framework scores: {}".format(framework_scores[:10]))
                 print("-------------------------\n")
 
-            human_framework_correlations = self._compute_correlations(framework_scores, human_scores, self.dimension_map)
+            human_framework_correlations = self._compute_correlations_for_all_dims(framework_scores, human_scores, self.dimension_map)
 
             if print_statements:
                 print("--- Computed correlations ---")
@@ -119,10 +119,13 @@ class PipelineEvaluator:
                 print("Split: {}".format(self.data_collector.dataset_split))
                 print("Model: {}".format(model))
                 print("Framework: {}".format(self.desired_framework.get_name()))
-                print("Correlation type: {}".format(self.correlation_score))
-                print("Correlation level: {}".format(self.correlation_level))
-                print(human_framework_correlations)
-                print("-----------------------------\n")
+                print("{} correlation -- {} level".format(self.correlation_score, self.correlation_level))
+                print("# Samples: {}".format(len(framework_scores)))
+                for dim in self.desired_dimensions:
+                    print("Correlation {}-{}: {}".format(dim, self.dimension_map[dim], human_framework_correlations[dim + "-" + self.dimension_map[dim]]))
+                    print("Average {}: {}".format(dim, np.mean([score[dim] for score in framework_scores])))
+                    print("Average human {}: {}".format(self.dimension_map[dim], np.mean([score[self.dimension_map[dim]] for score in human_scores])))
+                    print("-----------------------------\n")
 
             all_human_framework_correlations.append(human_framework_correlations)
 
@@ -148,11 +151,9 @@ class PipelineEvaluator:
         return merged_scores
 
 
-    def _evaluate_framework(self, model_responses, response_indices, reference_responses, turn_historys, knowledge_contexts, dataset_task_description="", model=""):
+    def _evaluate_framework(self, model_responses, response_indices, reference_responses, turn_historys, knowledge_contexts, model=""):
         """
         Evaluate the model responses using the desired evaluation framework.
-        This function should use persistent storage to save the evaluation results.
-        If the evaluation results are already available, they should be loaded from storage.
         :param model_responses: A list of model responses for each data sample looking like
             [{"model1": "response1", "model2": "response2"}, {"model1": "response1", "model2": "response2"}, ...]
         :param reference_responses: A list of reference responses for each data sample
@@ -164,7 +165,7 @@ class PipelineEvaluator:
         if len(model_responses) > 0:
             model_responses = [resp[model] for resp in model_responses]
             new_framework_scores = self.desired_framework.evaluate(model_responses, reference_responses,
-                                                            turn_historys, knowledge_contexts, self.desired_dimensions, dataset_task_description)
+                                                            turn_historys, knowledge_contexts, self.desired_dimensions)
             # Add the response indices to the scores so that we can identify the samples later
             for i, score in enumerate(new_framework_scores):
                 score["response_index"] = response_indices[i]
@@ -173,7 +174,7 @@ class PipelineEvaluator:
         else:
             return []
 
-    def _compute_correlations(self, framework_scores, human_scores, dimension_map):
+    def _compute_correlations_for_all_dims(self, framework_scores, human_scores, dimension_map):
         """
         Compute the correlation between the framework scores and the human scores.
         :param framework_scores: A list of framework scores for each data sample
@@ -185,13 +186,15 @@ class PipelineEvaluator:
             human_scores_dim = np.array([score_dict[human_dim] for score_dict in human_scores])
             framework_scores_dim = np.array([score[framework_dim] for score in framework_scores])
 
+            key = framework_dim + "-" + human_dim
+
             if self.correlation_score == 'spearman':
                 spearman_corr, _ = spearmanr(human_scores_dim, framework_scores_dim)
-                correlations[framework_dim] = spearman_corr
+                correlations[key] = spearman_corr
             elif self.correlation_score == 'kendall':
                 kendall_corr, _ = kendalltau(human_scores_dim, framework_scores_dim)
-                correlations[framework_dim] = kendall_corr
+                correlations[key] = kendall_corr
             elif self.correlation_score == 'pearson':
                 pearson_corr, _ = pearsonr(human_scores_dim, framework_scores_dim)
-                correlations[framework_dim] = pearson_corr
+                correlations[key] = pearson_corr
         return correlations

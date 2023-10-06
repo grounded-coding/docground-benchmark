@@ -21,7 +21,7 @@ class EvaluationFramework(ABC):
         self.reference_required = reference_required
 
     @abstractmethod
-    def evaluate(self, model_responses, reference_responses, turn_historys, knowledge_contexts, dims, dataset_task_description=""):
+    def evaluate(self, model_responses, reference_responses, turn_historys, knowledge_contexts, dims):
         pass
 
     def get_name(self):
@@ -32,7 +32,7 @@ class UniEval(EvaluationFramework):
     def __init__(self):
         super().__init__(['naturalness', 'coherence', 'groundedness', 'understandability', 'overall'])
 
-    def evaluate(self, model_responses, reference_responses, turn_historys, knowledge_contexts, dims, dataset_task_description=""):
+    def evaluate(self, model_responses, reference_responses, turn_historys, knowledge_contexts, dims):
         # knowledge_contexts is a list of lists of strings. for unieval these documents are concatenated and joined by a newline separator
         knowledge_contexts = ['\n'.join(context) for context in knowledge_contexts]
         # turn_historys is a list of lists of strings. for unieval these turns are concatenated and joined by a newline separator. at the very end we attach 2 newline separators
@@ -47,7 +47,7 @@ class DummyEval(EvaluationFramework):
     def __init__(self):
         super().__init__(['accur', 'app'])
 
-    def evaluate(self, model_responses, reference_responses, turn_historys, knowledge_contexts, dims, dataset_task_description=""):
+    def evaluate(self, model_responses, reference_responses, turn_historys, knowledge_contexts, dims):
         scores = []
         for response in model_responses:
             assert isinstance(response, str)
@@ -60,13 +60,13 @@ class DummyEval(EvaluationFramework):
 
 class LLEval(EvaluationFramework):
     def __init__(self):
-        super().__init__(['appropriate', 'accurate'])
+        super().__init__(['appropriate', 'accurate', "grounded"])
 
-    def evaluate(self, model_responses, reference_responses, turn_historys, knowledge_contexts, dims, dataset_task_description=""):
+    def evaluate(self, model_responses, reference_responses, turn_historys, knowledge_contexts, dims):
         data = convert_to_json(output_list=model_responses, src_list=turn_historys, context_list=knowledge_contexts)
         prompt_template = PromptTemplate("configs/prompt_likert_config.json")
         llama2local = PromptScorer(api_url="http://gpu-19.apptek.local:8080/generate", metric_config_file="configs/gen_config.json", prompt_template=prompt_template, num_retries=3)
-        evaluator = DialogEvaluator(llama2local, dataset_task_description=dataset_task_description)
+        evaluator = DialogEvaluator(llama2local, dimension_definitions_file="configs/dimension_definitions.json")
         eval_scores, eval_expls = evaluator.evaluate(data, print_result=True, dims=dims)
         merged_scores = []
         for i, score in enumerate(eval_scores):
@@ -80,7 +80,7 @@ class KnowledgeF1(EvaluationFramework):
     def __init__(self):
         super().__init__(['knowledge-f1'], reference_required=False)
 
-    def evaluate(self, model_responses, reference_responses, turn_historys, knowledge_contexts, dims, dataset_task_description=""):
+    def evaluate(self, model_responses, reference_responses, turn_historys, knowledge_contexts, dims):
         # Knowledge F1 is the average tokenlevel F1 overlap of the generated response and each document in the knowledge context
         scores = []
         for response, context in zip(model_responses, knowledge_contexts):
@@ -114,7 +114,7 @@ class BLEU(EvaluationFramework):
     def __init__(self):
         super().__init__(['bleu-4', 'bleu-1'], reference_required=True)
 
-    def evaluate(self, model_responses, reference_responses, turn_historys, knowledge_contexts, dims, dataset_task_description=""):
+    def evaluate(self, model_responses, reference_responses, turn_historys, knowledge_contexts, dims):
         bleu_metric = BleuMetric()
         scores = []
         assert len(model_responses) == len(reference_responses)
@@ -125,7 +125,7 @@ class BLEU(EvaluationFramework):
                 if dim == "bleu-4":
                     score[dim] = bleu_metric.evaluate_example(response, reference)['bleu']
                 else:
-                    # bleu-1
+                    raise NotImplementedError("BLEU-1 needs a different tokenization strategy")
                     score[dim] = sentence_bleu([reference.split()], response.split(), weights=(1, 0, 0, 0))
             scores.append(score)
         return scores
@@ -135,7 +135,7 @@ class KnowledgeBLEU(EvaluationFramework):
     def __init__(self):
         super().__init__(['knowledge-bleu-4', 'knowledge-bleu-1'], reference_required=False)
 
-    def evaluate(self, model_responses, reference_responses, turn_historys, knowledge_contexts, dims, dataset_task_description=""):
+    def evaluate(self, model_responses, reference_responses, turn_historys, knowledge_contexts, dims):
         bleu_metric = BleuMetric()
         scores = []
         assert len(model_responses) == len(knowledge_contexts)
@@ -143,10 +143,10 @@ class KnowledgeBLEU(EvaluationFramework):
             assert isinstance(response, str)
             score = {}
             for dim in dims:
-                if dim == "bleu-4":
+                if dim == "knowledge-bleu-4":
                     score[dim] = np.mean([bleu_metric.evaluate_example(response, reference)['bleu'] for reference in references])
                 else:
-                    # bleu-1
+                    raise NotImplementedError("BLEU-1 needs a different tokenization strategy")
                     score[dim] = np.mean([sentence_bleu([reference.split()], response.split(), weights=(1, 0, 0, 0)) for reference in references])
             scores.append(score)
         return scores
@@ -157,7 +157,7 @@ class METEOR(EvaluationFramework):
     def __init__(self, reference_required=True):
         super().__init__(['meteor'], reference_required=reference_required)
 
-    def evaluate(self, model_responses, reference_responses, turn_historys, knowledge_contexts, dims, dataset_task_description=""):
+    def evaluate(self, model_responses, reference_responses, turn_historys, knowledge_contexts, dims):
         met_metric = MeteorMetric()
         met_score = met_metric.evaluate_batch(model_responses, reference_responses)['meteor'] * 100
         return met_score
@@ -167,7 +167,7 @@ class ROUGE(EvaluationFramework):
     def __init__(self, reference_required=True):
         super().__init__(['rouge-l','rouge-1','rouge-2'], reference_required=reference_required)
 
-    def evaluate(self, model_responses, reference_responses, turn_historys, knowledge_contexts, dims, dataset_task_description=""):
+    def evaluate(self, model_responses, reference_responses, turn_historys, knowledge_contexts, dims):
         scorer = rouge_scorer.RougeScorer(['rouge1', 'rouge2', 'rougeL'], use_stemmer=True)
         scores = scorer.score(reference_responses, model_responses)
         rouge_scores = {}

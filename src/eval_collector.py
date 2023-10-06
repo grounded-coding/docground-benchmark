@@ -58,9 +58,9 @@ class DialDocEvalCollector(HumanEvalCollector):
                         if model_responses is not None:
                             model_responses_f.append(model_responses[i])
                 except:
-                    print("No human ratings for sample {}".format(sample_index))
+                    pass
             else:
-                print("No human ratings for sample {}".format(sample_index))
+                pass
         return sample_indices_f, model_responses_f
 
     def extract_ratings(self, sample_indices, human_dims=["appropriateness", "groundedness"]):

@@ -1,0 +1,14 @@
+{
+    "appropriate": {
+        "description": "Rate how appropriate this response is. An appropriate response is naturally connected to the previous turns and helpful for the user's concern. Do not consider factual correctness.",
+        "name": "appropriate"
+    },
+    "accurate": {
+        "description": "Rate how accurate this response is. An accurate response is factually correct and consistent with the knowledge in the context. An inaccurate response invents facts, which cannot be cited or derived from the context. Carefully assess the score if some parts of the response are correct and other parts are wrong. Do not rate helpfulness or the style of the conversation.",
+        "name": "accurate"
+    },
+    "grounded": {
+        "description":"Rate how grounded this response is. A grounded response makes use of the information given in the context.",
+        "name": "grounded"
+    }
+}

@@ -32,7 +32,7 @@ class TestPipelineEvaluator(unittest.TestCase):
             {'accur': 0.6, 'app': 0.8}
         ]
         human_scores = self.dummy_collector.extract_ratings(sample_indices, human_dims=["dimension1", "dimension2"])
-        correlation = self.pipeline_evaluator._compute_correlations(framework_scores, human_scores, self.dimension_map)
+        correlation = self.pipeline_evaluator._compute_correlations_for_all_dims(framework_scores, human_scores, self.dimension_map)
 
     def test_run_pipeline(self):
         
