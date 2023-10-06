@@ -75,10 +75,8 @@ class DialDocEvalCollector(HumanEvalCollector):
                         rating[dim] = human_evals.loc[(human_evals["Input.cond_sys"] == human_evals.iloc[sample_index]["Input.cond_sys"]) &\
                                                        (human_evals["Input.ex_id"] == human_evals.iloc[sample_index]["Input.ex_id"])]["Answer.score_appropriateness"].mean()
                     else:
-                        # TODO Implement a voting strategy for groundedness
-                        # For the moment, just take the first one
                         rating[dim] = human_evals.loc[(human_evals["Input.cond_sys"] == human_evals.iloc[sample_index]["Input.cond_sys"]) &\
-                                                       (human_evals["Input.ex_id"] == human_evals.iloc[sample_index]["Input.ex_id"])]["Answer.match_ref"].iloc[0]
+                                                       (human_evals["Input.ex_id"] == human_evals.iloc[sample_index]["Input.ex_id"])]["Answer.match_ref"].mean()
                 ratings.append(rating)
             else:
                 raise ValueError("No human ratings for sample {}".format(sample_index))
@@ -196,3 +194,23 @@ class DSTCHumanEvalCollector(HumanEvalCollector):
                 [index for i, index in enumerate(sample_indices) if human_ratings[i][human_dim]  == 3],
                 [index for i, index in enumerate(sample_indices) if human_ratings[i][human_dim]  >= 4]]
         return sets
+
+
+class TopicalChatEvalCollector(HumanEvalCollector):
+
+    def __init__(self, human_eval_path):
+        super().__init__()
+        self.human_eval = load_data(human_eval_path)
+        
+    def extract_ratings(self, sample_indices, human_dims=["understandability", "naturalness", "coherence", "engagingness", "groundedness", "overall"]):
+        ratings = []
+        human_evals = self.human_eval
+        
+        for sample_index in sample_indices:
+            rating = {}
+            for dim in human_dims:
+                rating[dim] = float(human_evals[sample_index]["scores"][dim])
+            ratings.append(rating)
+
+        return ratings
+    

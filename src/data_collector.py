@@ -8,28 +8,6 @@ import pandas as pd
 import re
 
 
-def extract_turns(text):
-    pattern = r'<p>(USER|AGENT):\s+(.*?)<\/p>'
-    turns_raw = re.findall(pattern, text)
-    turns_merged = []
-    current_speaker = None
-    current_turn = ""
-
-    for speaker, turn in turns_raw:
-        if speaker == current_speaker:
-            current_turn += " " + turn
-        else:
-            if current_turn:
-                turns_merged.append(current_turn)
-            current_speaker = speaker
-            current_turn = turn
-
-    if current_turn:
-        turns_merged.append(current_turn)
-
-    return turns_merged
-
-
 class DataCollector(ABC):
     def __init__(self, dataset: str, dataset_split: str, dataset_name: str):
         self.dataset = dataset
@@ -100,13 +78,11 @@ class BEGINDataCollector(DataCollector):
         :param dataset: The dataset to use.
         :return: A tuple of sample indices and candidate responses.
         """
-        candidate_responses = []
         sample_indices = []
         j = 0
         data = pd.read_csv(f'{self.dataset}/begin_{self.dataset_split}_{self.dataset_name}.tsv', sep='\t')
         for i in range(len(data)):
             if data.iloc[i]["response"] is not None and not (not get_generic and data.iloc[i]["begin_label"] == "Generic"):
-                candidate_responses.append(data.iloc[i]["response"])
                 sample_indices.append(i)
                 j += 1
             if n > 0 and j >= n:
@@ -171,6 +147,27 @@ class DialDocDataCollector(DataCollector):
                 break
         return sample_indices
 
+    def _extract_turns(self, text):
+        pattern = r'<p>(USER|AGENT):\s+(.*?)<\/p>'
+        turns_raw = re.findall(pattern, text)
+        turns_merged = []
+        current_speaker = None
+        current_turn = ""
+
+        for speaker, turn in turns_raw:
+            if speaker == current_speaker:
+                current_turn += " " + turn
+            else:
+                if current_turn:
+                    turns_merged.append(current_turn)
+                current_speaker = speaker
+                current_turn = turn
+
+        if current_turn:
+            turns_merged.append(current_turn)
+
+        return turns_merged
+
     def collect_sample_contexts(self, sample_indices: List[int]) -> Tuple[List[int], List[List[str]], List[List[str]]]:
         reference_responses = []
         turn_historys = []
@@ -179,7 +176,7 @@ class DialDocDataCollector(DataCollector):
 
         for index in sample_indices:
             cur_knowledge = data.iloc[index]["Input.grounding_sec"]
-            turn_history = extract_turns(data.iloc[index]["Input.dialogue_history"])
+            turn_history = self._extract_turns(data.iloc[index]["Input.dialogue_history"])
             turn_historys.append(turn_history)
             knowledge_contexts.append([cur_knowledge])
             # Remove "AGENT:" string from the start of the reference
@@ -331,4 +328,57 @@ class DSTCDataCollector(DataCollector):
             turn_historys.append(selected_turns)
             knowledge_contexts.append(sentences)
 
+        return reference_responses, turn_historys, knowledge_contexts
+
+
+class TopicalChatDataCollector(DataCollector):
+    def __init__(self, dataset_path: str):
+        super().__init__(dataset_path, dataset_split="", dataset_name="TopicalChat_UE")
+
+    def get_samples_with_target(self, n=-1) -> Tuple[List[int], List[str]]:
+        """
+        Get all samples which are intended to be used for response generation.
+
+        :param dataset_split: The dataset split to use.
+        :param dataset: The dataset to use.
+        :return: A tuple of sample indices and candidate responses.
+        """
+        sample_indices = []
+        j = 0
+        with open(f'{self.dataset}/topical_chat.json') as f:
+            labels = json.load(f)
+            for i in range(len(labels)):
+                sample_indices.append(i)
+                j += 1
+                if n > 0 and j >= n:
+                    break
+        return sample_indices
+
+    def get_pred_responses(self, sample_indices, model_candidates):
+        candidate = model_candidates[0]
+        pred_data = load_data(f'{self.dataset}/topical_chat.json')
+        model_responses = []
+        for index in sample_indices:
+            x = pred_data[index]
+            model_responses.append({candidate: x["system_output"]})
+        return model_responses
+
+    def collect_sample_contexts(self, sample_indices: List[int]) -> Tuple[List[int], List[List[str]], List[List[str]]]:
+        reference_responses = None
+        turn_historys = []
+        knowledge_contexts = []
+        with open(f'{self.dataset}/topical_chat.json') as f:
+            data = json.load(f)
+            for index in sample_indices:
+                cur_knowledge = data[index]['context']
+                turn_history = data[index]['source']
+                if cur_knowledge == "_nofact\n":
+                    cur_knowledge = ""
+                # turn historys are separated by \n. the ending is marked by \n\n so it will look like
+                # hello \n who are you? \n\n
+                turn_history = turn_history[:-2].split("\n")
+                
+                # for knowledge we need to remove the ending marked by \n
+                knowledge_contexts.append([cur_knowledge[:-1]])
+                turn_historys.append(turn_history)
         return reference_responses, turn_historys, knowledge_contexts

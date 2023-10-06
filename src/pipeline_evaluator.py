@@ -84,7 +84,8 @@ class PipelineEvaluator:
                 print("--- Sample contexts ---")
                 for i in range(10):
                     print("Sample index: {}".format(response_indices[i]))
-                    print("Reference response: {}".format(reference_responses[i]))
+                    if reference_responses is not None:
+                        print("Reference response: {}".format(reference_responses[i]))
                     print("Model response: {}".format(model_responses[i][model]))
                     print("Turn history: {}".format(turn_historys[i]))
                     print("Knowledge context: {}".format(knowledge_contexts[i]))
@@ -92,18 +93,14 @@ class PipelineEvaluator:
 
             if self.desired_framework.reference_required and reference_responses is None:
                 raise ValueError("Reference responses are required for the selected evaluation framework.")
+            
             existing_framework_scores = self._load_scores_from_storage(model)
-
-            # TODO Response_index value might not correspond to loaded index when we are iteratively evaluating parts of the data, must be FIXED
-
-            # Filter for the subset of responses by response_indices
-            existing_framework_scores = [score for score in existing_framework_scores if score["response_index"] in response_indices]
+            existing_framework_scores = self._get_subsest_of_scores_with_all_dims(existing_framework_scores, response_indices, self.desired_dimensions)
 
             new_response_indices, new_model_responses, new_reference_responses, new_turn_historys, new_knowledge_contexts = self.get_new_contexts_only(existing_framework_scores, response_indices, reference_responses, turn_historys, knowledge_contexts, model_responses)
 
             new_framework_scores = self._evaluate_framework(new_model_responses, new_response_indices, new_reference_responses, new_turn_historys, new_knowledge_contexts, dataset_task_description, model)
-            # TODO Fix the merging here for different dimensions
-            framework_scores = existing_framework_scores + new_framework_scores
+            framework_scores = self._merge_existing_and_new_scores(existing_framework_scores, new_framework_scores)
             self._write_scores_to_storage(framework_scores, model)
 
             human_scores = self.eval_collector.extract_ratings(response_indices, self.dimension_map.values())
@@ -130,6 +127,26 @@ class PipelineEvaluator:
             all_human_framework_correlations.append(human_framework_correlations)
 
         return all_human_framework_correlations
+    
+    def _get_subsest_of_scores_with_all_dims(self, existing_framework_scores, response_indices, desired_dimensions):
+        # only if all dimensions from desired_dimensions are available for a sample, we can use the existing score
+        existing_framework_scores = [score for score in existing_framework_scores if score["response_index"] in response_indices and all(dim in score for dim in desired_dimensions)]
+        return existing_framework_scores
+
+    def _merge_existing_and_new_scores(self, existing_framework_scores, new_framework_scores):
+        merged_scores = []
+        all_response_indices = [score["response_index"] for score in existing_framework_scores] + [score["response_index"] for score in new_framework_scores]
+        for response_index in all_response_indices:
+            existing_score_dict = next((score for score in existing_framework_scores if score["response_index"] == response_index), None)
+            new_score_dict = next((score for score in new_framework_scores if score["response_index"] == response_index), None)
+            if existing_score_dict is None:
+                merged_scores.append(new_score_dict)
+            elif new_score_dict is None:
+                merged_scores.append(existing_score_dict)
+            else:
+                merged_scores.append({**existing_score_dict, **new_score_dict})
+        return merged_scores
+
 
     def _evaluate_framework(self, model_responses, response_indices, reference_responses, turn_historys, knowledge_contexts, dataset_task_description="", model=""):
         """
