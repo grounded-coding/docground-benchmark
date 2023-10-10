@@ -20,6 +20,7 @@ kf1_dimensions = ["knowledge-f1"]
 model_candidates = ['baseline']
 
 for framework, framework_dimensions in [(lleval, lleval_dimensions), (unieval, unieval_dimensions), (kf1, kf1_dimensions), (bleu, bleu_dimensions)]:
+    framework_to_human_dimension_map = {framework_dimensions[0]: "attributability"}
     ## BEGIN CMU DoG
     begin_cmu_collector = BEGINDataCollector(dataset_path="../BEGIN-dataset/cmu-dog", dataset_split="dev", dataset_name="cmu")
     response_indices = begin_cmu_collector.get_samples_with_target(n=-1)

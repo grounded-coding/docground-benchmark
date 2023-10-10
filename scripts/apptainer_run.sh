@@ -1,1 +1,1 @@
-pip install -r requirements.txt && python example_run.py
+pip install -r requirements.txt && python begin_pipeline.py

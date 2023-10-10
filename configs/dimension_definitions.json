@@ -8,7 +8,7 @@
         "name": "accurate"
     },
     "grounded": {
-        "description":"Rate how grounded this response is. A grounded response makes use of the information given in the context.",
+        "description":"Rate how grounded this response is. A grounded response uses the information from the context well. An ungrounded response does not mention or refer to the context at all. Do not rate helpfulness or the style of the conversation.",
         "name": "grounded"
     }
 }

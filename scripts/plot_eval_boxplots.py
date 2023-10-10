@@ -1,7 +1,7 @@
 import json
 import matplotlib.pyplot as plt
-from src.data_collector import DataCollector, BEGINDataCollector, DSTCDataCollector
-from src.eval_collector import BEGINHumanEvalCollector, DSTCHumanEvalCollector
+from ..src.data_collector import DataCollector, BEGINDataCollector, DSTCDataCollector
+from ..src.eval_collector import BEGINHumanEvalCollector, DSTCHumanEvalCollector
 
 human_dim = "attributability"
 framework_dim = "groundedness"

@@ -12,7 +12,7 @@ correlation_level = 'sample'
 unieval = UniEval()
 unieval_dimensions = ["groundedness", "coherence"]
 lleval = LLEval()
-lleval_dimensions = ["grounded", "appropriate"]
+lleval_dimensions = ["accurate", "appropriate", "grounded"]
 bleu = KnowledgeBLEU()
 bleu_dimensions = ["knowledge-bleu-4"]
 kf1 = KnowledgeF1()
@@ -24,6 +24,8 @@ for framework, framework_dimensions in [(lleval, lleval_dimensions), (unieval, u
     framework_to_human_dimension_map = {framework_dimensions[0]: "groundedness"}
     if len(framework_dimensions) > 1:
         framework_to_human_dimension_map[framework_dimensions[1]] = "coherence"
+    if len(framework_dimensions) > 2:
+        framework_to_human_dimension_map[framework_dimensions[2]] = "groundedness"
     topicalchat_ue_collector = TopicalChatDataCollector("../topicalchat")
     response_indices = topicalchat_ue_collector.get_samples_with_target(n=-1)
     model_responses = topicalchat_ue_collector.get_pred_responses(response_indices, model_candidates)
