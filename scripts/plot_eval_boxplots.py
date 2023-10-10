@@ -12,25 +12,26 @@ framework_evals_path = "dstc9/test/baseline"
 human_dim = "accuracy"
 framework_dim = "accurate"
 framework_name = "LLEval"
+begin_set = False
 
 # Replace this with the path to your evaluation file
 evaluation_file = f"outputs/{framework_evals_path}/{framework_name}.json"
 
-# BEGIN
-begin = BEGINDataCollector(dataset_path="../BEGIN-dataset/topicalchat", dataset_split="dev", dataset_name="tc")
-sample_indices = begin.get_samples_with_target()
-begin_eval_collector = BEGINHumanEvalCollector(human_eval_path="../BEGIN-dataset/topicalchat/begin_dev_tc.tsv")
-sample_indices, _ = begin_eval_collector.get_subset_with_human_eval(sample_indices, None)
-human_ratings = begin_eval_collector.extract_ratings(sample_indices)
-index_sets = begin_eval_collector.get_index_sets_disjunctive(sample_indices, human_ratings, human_dim)
+if begin_set:
+    begin = BEGINDataCollector(dataset_path="../BEGIN-dataset/topicalchat", dataset_split="dev", dataset_name="tc")
+    sample_indices = begin.get_samples_with_target()
+    begin_eval_collector = BEGINHumanEvalCollector(human_eval_path="../BEGIN-dataset/topicalchat/begin_dev_tc.tsv")
+    sample_indices, _ = begin_eval_collector.get_subset_with_human_eval(sample_indices, None)
+    human_ratings = begin_eval_collector.extract_ratings(sample_indices)
+    index_sets = begin_eval_collector.get_index_sets_disjunctive(sample_indices, human_ratings, human_dim)
 
-# DSTC9
-dstc = DSTCDataCollector(dataset_path="../dstc11-track5/data/dstc9", dataset_split="test", dataset_name="dstc9")
-dstc_eval_coll = DSTCHumanEvalCollector(human_eval_path="../dstc11-track5/results/results_dstc9/baseline/entry0.human_eval.json")
-sample_indices = dstc.get_samples_with_target()
-sample_indices, _ = dstc_eval_coll.get_subset_with_human_eval(sample_indices, None)
-human_ratings = dstc_eval_coll.extract_ratings(sample_indices)
-index_sets = dstc_eval_coll.get_index_sets_disjunctive(sample_indices, human_ratings, human_dim)
+else:
+    dstc = DSTCDataCollector(dataset_path="../dstc11-track5/data/dstc9", dataset_split="test", dataset_name="dstc9")
+    dstc_eval_coll = DSTCHumanEvalCollector(human_eval_path="../dstc11-track5/results/results_dstc9/baseline/entry0.human_eval.json")
+    sample_indices = dstc.get_samples_with_target()
+    sample_indices, _ = dstc_eval_coll.get_subset_with_human_eval(sample_indices, None)
+    human_ratings = dstc_eval_coll.extract_ratings(sample_indices)
+    index_sets = dstc_eval_coll.get_index_sets_disjunctive(sample_indices, human_ratings, human_dim)
 
 # Load the evaluation data
 with open(evaluation_file, "r") as f:
@@ -53,7 +54,8 @@ colors = ['blue', 'green', 'red']
 for i, (accur_set, ax, color) in enumerate(zip(accur_scores, axes1, colors)):
     ax.boxplot(accur_set, patch_artist=True, boxprops=dict(facecolor=color))
     ax.set_title(f"Index Set {i + 1}")
-    ax.set_ylabel("Assigned Score")
+    if i == 0:
+        ax.set_ylabel("Assigned Score")
     ax.set_xticks([])
 
 # save the boxplot
@@ -61,15 +63,15 @@ plt.savefig(f"outputs/{framework_evals_path}/{framework_name}_boxplot.png", dpi=
 plt.clf()
 
 # Create the histograms
-fig2, axes2 = plt.subplots(1, len(index_sets), sharey=True)
 
-for i, (accur_set, ax, color) in enumerate(zip(accur_scores, axes2, colors)):
-    bins = np.linspace(0, max(accur_set) if len(accur_set) > 0 else 1, 6)
-    ax.hist(accur_set, bins=bins, edgecolor='black', color=color, alpha=0.7)
-    ax.set_title(f"Index Set {i + 1}")
+for scores, name in (([score for accur_set in accur_scores for score in accur_set], framework_name), ([score[human_dim] for score in human_ratings], "Human")):
+
+    fig2, ax = plt.subplots(1, 1)
+    bins = np.linspace(0, max(scores) if len(scores) > 0 else 1, 6)
+    ax.hist(scores, bins=bins, edgecolor='black', color=color, alpha=0.7)
+    ax.set_title(f"Full Set")
     ax.set_xlabel("Score")
-    if i == 0:  # set y-axis label only for the first subplot
-        ax.set_ylabel("Frequency")
+    ax.set_ylabel("Frequency")
 
-# save the histogram
-plt.savefig(f"outputs/{framework_evals_path}/{framework_name}_histogram.png", dpi=300)
+    # save the histogram
+    plt.savefig(f"outputs/{framework_evals_path}/{name}_histogram.png", dpi=300)
