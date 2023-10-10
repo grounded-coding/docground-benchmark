@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 import json
 from itertools import groupby
 from operator import itemgetter
@@ -45,7 +45,7 @@ class DataCollector(ABC):
         pass
 
     @abstractmethod
-    def get_pred_responses(self, sample_indices, model_candidates):
+    def get_pred_responses(self, sample_indices, model_candidates) -> List[Dict[str, str]]:
         # TODO implement proper multiple model candidate selection for all collectors
         pass
 
@@ -53,6 +53,20 @@ class DataCollector(ABC):
 class DummyDataCollector(DataCollector):
     def __init__(self) -> None:
         super().__init__(dataset="dummy_data", dataset_split="dummy_split", dataset_name="dummy")
+
+    def get_pred_responses(self, sample_indices, model_candidates):
+        # For each entry in model_candidates, take this name as key and return random strings as values for all sample_indices
+        model_responses = []
+        for candidate in model_candidates:
+            for sample_index in sample_indices:
+                model_responses.append({candidate: "Dummy response"})
+        return model_responses
+
+    def get_samples_with_target(self, n=-1):
+        sample_indices = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+        if n > 0:
+            return sample_indices[:n]
+        return sample_indices
 
     def collect_sample_contexts(self, sample_indices):
         reference_responses = ["Dummy response label"] * len(sample_indices)
