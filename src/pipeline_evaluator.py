@@ -71,18 +71,17 @@ class PipelineEvaluator:
 
     def run_pipeline(self, model_responses, response_indices, print_statements=True, exclude_rating=None, verbose=False):
         reference_responses = None
-        response_indices, model_responses = self.eval_collector.get_subset_with_human_eval(response_indices, model_responses, exclude_rating=exclude_rating)
-        reference_responses, turn_historys, knowledge_contexts = self.data_collector.collect_sample_contexts(response_indices)
         all_human_framework_correlations = []
 
-        if verbose:
-            print("--- Computed correlations ---")
-            print("Dataset: {}".format(self.data_collector.get_name()))
-            print("Split: {}".format(self.data_collector.dataset_split))
-            print("-----------------------------\n")
+        print("--- {} correlation -- {} level ---".format(self.correlation_score, self.correlation_level))
+        print("Dataset: {}".format(self.data_collector.get_name()))
+        print("Split: {}".format(self.data_collector.dataset_split))
+        print("-----------------------------\n")
 
         if self.correlation_level == 'sample':
             for model in self.model_candidates:
+                response_indices, model_responses = self.eval_collector.get_subset_with_human_eval(response_indices, model_responses, exclude_rating=exclude_rating, model=model)
+                reference_responses, turn_historys, knowledge_contexts = self.data_collector.collect_sample_contexts(response_indices)
                 if verbose:
                     print("--- Sample contexts ---")
                     for i in range(3):
@@ -92,7 +91,6 @@ class PipelineEvaluator:
                         print("Model response: {}".format(model_responses[i][model]))
                         print("Turn history: {}".format(turn_historys[i]))
                         print("Knowledge context: {}".format(knowledge_contexts[i]))
-                        print("-------------------------\n")
                 model_sample_correlations = self.compute_sample_correlation_for_model(model_responses, response_indices, reference_responses, turn_historys, knowledge_contexts, model, print_statements)
                 all_human_framework_correlations.append(model_sample_correlations)
 
@@ -102,6 +100,8 @@ class PipelineEvaluator:
                 human_dim = self.dimension_map[framework_dim]
                 avg_scores[framework_dim] = ([], [])
                 for model in self.model_candidates:
+                    response_indices, model_responses = self.eval_collector.get_subset_with_human_eval(response_indices, model_responses, exclude_rating=exclude_rating, model=model)
+                    reference_responses, turn_historys, knowledge_contexts = self.data_collector.collect_sample_contexts(response_indices)
                     framework_scores = self._get_framework_scores(model, reference_responses, turn_historys, knowledge_contexts, model_responses, response_indices)
                     human_scores = self.eval_collector.extract_ratings_for_sample_indices(response_indices, self.dimension_map.values(), model)
 
@@ -131,16 +131,14 @@ class PipelineEvaluator:
             if print_statements:
                 print("Models: {}".format(self.model_candidates))
                 print("Framework: {}".format(self.desired_framework.get_name()))
-                print("{} correlation -- {} level".format(self.correlation_score, self.correlation_level))
                 for entry in system_correlations:
                     print("Correlation {}: {}".format(entry, system_correlations[entry]))
 
+        print("-----------------------------\n")
         return all_human_framework_correlations
 
 
-    def _get_framework_scores(self, model, reference_responses, turn_historys, knowledge_contexts, model_responses, response_indices):
-        # filter out all model responses which are set to None first
-        
+    def _get_framework_scores(self, model, reference_responses, turn_historys, knowledge_contexts, model_responses, response_indices):        
         existing_framework_scores = self._load_scores_from_storage(model)
         existing_framework_scores = self._get_subset_of_scores_with_all_dims(existing_framework_scores, response_indices, self.desired_dimensions)
 
@@ -160,7 +158,7 @@ class PipelineEvaluator:
         framework_scores = self._get_framework_scores(model, reference_responses, turn_historys, knowledge_contexts, model_responses, response_indices)
         human_scores = self.eval_collector.extract_ratings_for_sample_indices(response_indices, self.dimension_map.values(), model)
 
-        if print_statements:
+        if print_statements and False:
             print("--- Sample responses ---")
             print("Response indices: {}".format(response_indices[:10]))
             print("Human scores: {}".format(human_scores[:10]))
@@ -172,13 +170,11 @@ class PipelineEvaluator:
         if print_statements:
             print("Model: {}".format(model))
             print("Framework: {}".format(self.desired_framework.get_name()))
-            print("{} correlation -- {} level".format(self.correlation_score, self.correlation_level))
             print("# Samples: {}".format(len(framework_scores)))
             for dim in self.desired_dimensions:
                 print("Correlation {}-{}: {}".format(dim, self.dimension_map[dim], human_framework_correlations[dim + "-" + self.dimension_map[dim]]))
                 print("Average {}: {}".format(dim, np.mean([score[dim] for score in framework_scores])))
                 print("Average human {}: {}".format(self.dimension_map[dim], np.mean([score[self.dimension_map[dim]] for score in human_scores])))
-                print("-----------------------------\n")
 
         return human_framework_correlations
     

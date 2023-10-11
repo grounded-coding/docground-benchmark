@@ -14,7 +14,7 @@ class HumanEvalCollector(ABC):
     def extract_ratings_for_sample_indices(self, model=""):
         pass
 
-    def get_subset_with_human_eval(self, sample_indices, model_responses, exclude_rating=None):
+    def get_subset_with_human_eval(self, sample_indices, model_responses, exclude_rating=None, model=""):
         return sample_indices, model_responses
 
     def get_index_sets_disjunctive(self, sample_indices, human_ratings, human_dim):
@@ -42,7 +42,8 @@ class DialDocEvalCollector(HumanEvalCollector):
         super().__init__()
         self.human_eval = pd.read_csv(human_eval_path, sep=',')
 
-    def get_subset_with_human_eval(self, sample_indices, model_responses, exclude_rating=-1):
+    # TODO Align this with the method below regarding model extraction
+    def get_subset_with_human_eval(self, sample_indices, model_responses, exclude_rating=-1, model=""):
         human_evals = self.human_eval
         sample_indices_f = []
         model_responses_f = []
@@ -127,7 +128,7 @@ class BEGINHumanEvalCollector(HumanEvalCollector):
 
         return sets
 
-    def get_subset_with_human_eval(self, sample_indices, model_responses, exclude_rating=None):
+    def get_subset_with_human_eval(self, sample_indices, model_responses, exclude_rating=None, model=""):
         if exclude_rating is None:
             return sample_indices, model_responses
 
@@ -181,7 +182,8 @@ class DSTCHumanEvalCollector(HumanEvalCollector):
                 valid_rating += 1
             else:
                 # Warn the user that there is no human rating for this sample and skip it
-                print("No human rating for sample {} - ONLY PROCEED FOR SYSTEM CORRELATIONS".format(sample_index))
+                pass
+                # print("No human rating for sample {} - ONLY PROCEED FOR SYSTEM CORRELATIONS".format(sample_index))
 
         return ratings
 
