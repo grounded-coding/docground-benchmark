@@ -37,8 +37,6 @@ for framework, framework_dimensions in [(lleval, lleval_dimensions), (unieval, u
     response_indices = dstc_collector.get_samples_with_target(n=200)
     model_responses = dstc_collector.get_pred_responses(response_indices, ["chatgpt"], baseline_pred_path)
 
-    # TODO FIX the index situationpy
-
     eval_collector = DSTCHumanEvalCollector(human_eval_path=baseline_human_eval)
     pipeline_evaluator = PipelineEvaluator(framework, eval_collector, dstc_collector, framework_dimensions, framework_to_human_dimension_map, type, correlation_level, ["chatgpt"])
     human_framework_correlations = pipeline_evaluator.run_pipeline(model_responses, response_indices)

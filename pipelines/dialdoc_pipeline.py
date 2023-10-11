@@ -1,7 +1,8 @@
-
+import sys
+sys.path.append('/home/nhilgers/setups/DocGroundEval')
 from src.data_collector import DSTCDataCollector, DummyDataCollector, BEGINDataCollector, DialDocDataCollector, TopicalChatDataCollector
 from src.pipeline_evaluator import PipelineEvaluator
-from src.eval_framework import DummyEval, LLEval, KnowledgeF1, BLEU, UniEval, KnowledgeBLEU
+from src.eval_framework import DummyEval, LLEval, KnowledgeF1, BLEU, UniEval, KnowledgeBLEU, GEval
 from src.eval_collector import DummyEvalCollector, DSTCHumanEvalCollector, BEGINHumanEvalCollector, DialDocEvalCollector, TopicalChatEvalCollector
 import json
 from utils.file_processing import load_data
@@ -11,14 +12,15 @@ from typing import List, Dict
 type = 'spearman'
 correlation_level = 'sample'
 unieval = UniEval()
-unieval_dimensions = ["groundedness"]
+unieval_dimensions = ["groundedness", "coherence"]
+geval = GEval()
 lleval = LLEval()
-lleval_dimensions = ["accurate"]
+lleval_dimensions = ["accurate", "appropriate"]
 bleu = KnowledgeBLEU()
 bleu_dimensions = ["knowledge-bleu-4"]
 kf1 = KnowledgeF1()
 kf1_dimensions = ["knowledge-f1"]
-model_candidates = ['baseline']
+model_candidates = ["gptllama"]
 
 for framework, framework_dimensions in [(lleval, lleval_dimensions), (unieval, unieval_dimensions), (kf1, kf1_dimensions), (bleu, bleu_dimensions)]:
     ## DialDoc

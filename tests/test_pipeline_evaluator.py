@@ -1,6 +1,8 @@
 import numpy as np
 import pandas as pd
 import unittest
+import sys
+sys.path.append('/home/nhilgers/setups/DocGroundEval')
 from typing import List, Dict 
 from src.eval_collector import DSTCHumanEvalCollector, DummyEvalCollector
 from src.data_collector import DataCollector, DummyDataCollector
@@ -30,12 +32,10 @@ class TestPipelineEvaluator(unittest.TestCase):
             {'accur': 0.8, 'app': 0.7},
             {'accur': 0.6, 'app': 0.8}
         ]
-        human_scores = self.dummy_collector.extract_ratings(sample_indices, human_dims=self.human_dims)
+        human_scores = self.dummy_collector.extract_ratings_for_sample_indices(sample_indices, human_dims=self.human_dims)
         correlation = pipeline_evaluator._compute_correlations_for_all_dims(framework_scores, human_scores, self.dimension_map)
-    
 
-
-    def test_run_pipeline(self):
+    def test_sample_run_pipeline(self):
         model_candidates = ['model1']
         pipeline_evaluator = PipelineEvaluator(self.desired_framework, self.dummy_collector, self.data_collector,
                                                     self.framework_dims, self.dimension_map,
@@ -58,6 +58,31 @@ class TestPipelineEvaluator(unittest.TestCase):
         self.assertIsInstance(human_framework_correlations, List)
         self.assertEqual(len(human_framework_correlations), len(model_candidates))
         print(human_framework_correlations)
+
+    def test_system_run_pipeline(self):
+        model_candidates = ['model1', 'model2']
+        pipeline_evaluator = PipelineEvaluator(self.desired_framework, self.dummy_collector, self.data_collector,
+                                                    self.framework_dims, self.dimension_map,
+                                                     self.type, correlation_level="system", model_candidates=model_candidates)
+
+        # Load using data_collector class
+        sample_indices = [4, 3]
+
+        # Load from some prediction
+        model_responses = [
+            {'model1': 'response1', 'model2': 'response2'},
+            {'model1': 'response3', 'model2': 'response4'}
+        ]
+
+        # Load using HumanEvalCollector
+        human_framework_correlations = pipeline_evaluator.run_pipeline(
+            model_responses, sample_indices
+        )
+
+        self.assertIsInstance(human_framework_correlations, List)
+        self.assertEqual(len(human_framework_correlations), 1)
+        print(human_framework_correlations)
+
 
 if __name__ == '__main__':
     unittest.main()

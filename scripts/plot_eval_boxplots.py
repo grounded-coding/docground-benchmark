@@ -22,7 +22,7 @@ if begin_set:
     sample_indices = begin.get_samples_with_target()
     begin_eval_collector = BEGINHumanEvalCollector(human_eval_path="../BEGIN-dataset/topicalchat/begin_dev_tc.tsv")
     sample_indices, _ = begin_eval_collector.get_subset_with_human_eval(sample_indices, None)
-    human_ratings = begin_eval_collector.extract_ratings(sample_indices)
+    human_ratings = begin_eval_collector.extract_ratings_for_sample_indices(sample_indices)
     index_sets = begin_eval_collector.get_index_sets_disjunctive(sample_indices, human_ratings, human_dim)
 
 else:
@@ -30,7 +30,7 @@ else:
     dstc_eval_coll = DSTCHumanEvalCollector(human_eval_path="../dstc11-track5/results/results_dstc9/baseline/entry0.human_eval.json")
     sample_indices = dstc.get_samples_with_target()
     sample_indices, _ = dstc_eval_coll.get_subset_with_human_eval(sample_indices, None)
-    human_ratings = dstc_eval_coll.extract_ratings(sample_indices)
+    human_ratings = dstc_eval_coll.extract_ratings_for_sample_indices(sample_indices)
     index_sets = dstc_eval_coll.get_index_sets_disjunctive(sample_indices, human_ratings, human_dim)
 
 # Load the evaluation data

@@ -152,10 +152,13 @@ class DialDocDataCollector(DataCollector):
         sample_indices = []
         j = 0
         data = pd.read_csv(f'{self.dataset}/Batch_383409_batch_results_final.csv', sep=',')
+        # Track all seen Input.Ans_id values to avoid duplicates
+        seen_ans_ids = []
 
         for i in range(len(data)):
-            if data.iloc[i]["Input.human_ref"] is not None:
+            if data.iloc[i]["Input.human_ref"] is not None and data.iloc[i]["Input.ex_id"] not in seen_ans_ids:
                 sample_indices.append(i)
+                seen_ans_ids.append(data.iloc[i]["Input.ex_id"])
                 j += 1
             if n > 0 and j >= n:
                 break
@@ -201,10 +204,18 @@ class DialDocDataCollector(DataCollector):
     def get_pred_responses(self, sample_indices, model_candidates):
         # Get response entries as a list for all provided sample indices from pred_data. pred_data is a pandas dataframe with column name response
         model_responses = []
-        data = pd.read_csv(f'{self.dataset}/Batch_383409_batch_results_final.csv', sep=',')
+        data = pd.read_csv(f'{self.dataset}/Batch_383409_batch_results_final.csv', sep=',')#
         for index in sample_indices:
-            x = data.iloc[index]
-            model_responses.append({model_candidates[0]: x["Input.response_sys"]})
+            entrys = {}
+            for candidate in model_candidates:
+                try:
+                    entry = data.loc[(data['Input.cond_sys'] == candidate) & (data['Input.ex_id'] == data.iloc[index]['Input.ex_id'])]
+                    # Take Input.response_sys from the first entry
+                    entrys[candidate] = entry.iloc[0]['Input.response_sys']
+                except IndexError:
+                    # If there is no entry for this candidate, set it to None
+                    entrys[candidate] = None
+            model_responses.append(entrys)
         return model_responses
         
 
@@ -213,8 +224,13 @@ class DSTCDataCollector(DataCollector):
     Collect sample contexts for the DSTC11 Track 5 dataset. Also compatible with DSTC9 Track 1 dataset.
     """
 
-    def __init__(self, dataset_path, dataset_split, dataset_name=None) -> None:
+    def __init__(self, dataset_path, dataset_split, dataset_name=None, pred_dict=None) -> None:
         super().__init__(dataset_path, dataset_split, dataset_name)
+        pred_map = {}
+        for model in pred_dict:
+            human_eval_path = pred_dict[model]
+            pred_map[model] = load_data(human_eval_path)
+        self.pred_map = pred_map
 
     def get_samples_with_target(self, n=-1) -> Tuple[
         List[int], List[str]]:
@@ -239,13 +255,14 @@ class DSTCDataCollector(DataCollector):
                     break
         return sample_indices
 
-    def get_pred_responses(self, sample_indices, model_candidates, pred_path):
-        candidate = model_candidates[0]
-        pred_data = load_data(pred_path)
+    def get_pred_responses(self, sample_indices, model_candidates):
+        # TODO FIX the "" handling 
         model_responses = []
         for index in sample_indices:
-            x = pred_data[index]
-            model_responses.append({candidate: x["response"]} if x["target"] else None)
+            entrys = {}
+            for candidate in model_candidates:
+                entrys[candidate] = self.pred_map[candidate][index]["response"] if self.pred_map[candidate][index]["target"] else ""
+            model_responses.append(entrys)
         return model_responses
 
     def collect_sample_contexts(self, sample_indices: List[int],

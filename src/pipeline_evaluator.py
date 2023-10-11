@@ -30,10 +30,6 @@ class PipelineEvaluator:
         if correlation_level == 'system' and len(model_candidates) < 2:
             raise ValueError("For system-level correlation, at least 2 model candidates are required.")
 
-        if len(model_candidates) > 1:
-            self.correlation_level = 'system'
-            raise NotImplementedError("System-level correlation is not implemented yet.")
-
     def _load_scores_from_storage(self, model=""):
         score_path = Path("outputs") / self.data_collector.get_name() / self.data_collector.dataset_split / model \
                      / (self.desired_framework.get_name() + ".json")
@@ -79,59 +75,114 @@ class PipelineEvaluator:
         reference_responses, turn_historys, knowledge_contexts = self.data_collector.collect_sample_contexts(response_indices)
         all_human_framework_correlations = []
 
-        for model in self.model_candidates:
-            if verbose:
-                print("--- Sample contexts ---")
-                for i in range(10):
-                    print("Sample index: {}".format(response_indices[i]))
-                    if reference_responses is not None:
-                        print("Reference response: {}".format(reference_responses[i]))
-                    print("Model response: {}".format(model_responses[i][model]))
-                    print("Turn history: {}".format(turn_historys[i]))
-                    print("Knowledge context: {}".format(knowledge_contexts[i]))
-                    print("-------------------------\n")
+        if verbose:
+            print("--- Computed correlations ---")
+            print("Dataset: {}".format(self.data_collector.get_name()))
+            print("Split: {}".format(self.data_collector.dataset_split))
+            print("-----------------------------\n")
 
-            if self.desired_framework.reference_required and reference_responses is None:
-                raise ValueError("Reference responses are required for the selected evaluation framework.")
-            
-            existing_framework_scores = self._load_scores_from_storage(model)
-            existing_framework_scores = self._get_subsest_of_scores_with_all_dims(existing_framework_scores, response_indices, self.desired_dimensions)
+        if self.correlation_level == 'sample':
+            for model in self.model_candidates:
+                if verbose:
+                    print("--- Sample contexts ---")
+                    for i in range(3):
+                        print("Sample index: {}".format(response_indices[i]))
+                        if reference_responses is not None:
+                            print("Reference response: {}".format(reference_responses[i]))
+                        print("Model response: {}".format(model_responses[i][model]))
+                        print("Turn history: {}".format(turn_historys[i]))
+                        print("Knowledge context: {}".format(knowledge_contexts[i]))
+                        print("-------------------------\n")
+                model_sample_correlations = self.compute_sample_correlation_for_model(model_responses, response_indices, reference_responses, turn_historys, knowledge_contexts, model, print_statements)
+                all_human_framework_correlations.append(model_sample_correlations)
 
-            new_response_indices, new_model_responses, new_reference_responses, new_turn_historys, new_knowledge_contexts = self.get_new_contexts_only(existing_framework_scores, response_indices, reference_responses, turn_historys, knowledge_contexts, model_responses)
+        else:
+            avg_scores = {}
+            for framework_dim in self.desired_dimensions:
+                human_dim = self.dimension_map[framework_dim]
+                avg_scores[framework_dim] = ([], [])
+                for model in self.model_candidates:
+                    framework_scores = self._get_framework_scores(model, reference_responses, turn_historys, knowledge_contexts, model_responses, response_indices)
+                    human_scores = self.eval_collector.extract_ratings_for_sample_indices(response_indices, self.dimension_map.values(), model)
 
-            new_framework_scores = self._evaluate_framework(new_model_responses, new_response_indices, new_reference_responses, new_turn_historys, new_knowledge_contexts, model)
-            framework_scores = self._merge_existing_and_new_scores(existing_framework_scores, new_framework_scores)
-            self._write_scores_to_storage(framework_scores, model)
+                    framework_scores_dim = np.array([score[framework_dim] for score in framework_scores])
+                    human_scores_dim = np.array([score[human_dim] for score in human_scores])
+                    avg_scores[framework_dim][0].append(np.mean(human_scores_dim))
+                    avg_scores[framework_dim][1].append(np.mean(framework_scores_dim))
 
-            human_scores = self.eval_collector.extract_ratings(response_indices, self.dimension_map.values())
+            # Compute the actual system level correlations
+            system_correlations = {}
+            for framework_dim in self.desired_dimensions:
+                human_dim = self.dimension_map[framework_dim]
+                key = framework_dim + "-" + human_dim
+                human_scores_dim, framework_scdim = avg_scores[framework_dim]
+
+                if self.correlation_score == 'spearman':
+                    spearman_corr, _ = spearmanr(human_scores_dim, framework_scdim)
+                    system_correlations[key] = spearman_corr
+                elif self.correlation_score == 'kendall':
+                    kendall_corr, _ = kendalltau(human_scores_dim, framework_scdim)
+                    system_correlations[key] = kendall_corr
+                elif self.correlation_score == 'pearson':
+                    pearson_corr, _ = pearsonr(human_scores_dim, framework_scdim)
+                    system_correlations[key] = pearson_corr
+            all_human_framework_correlations.append(system_correlations)
+
             if print_statements:
-                print("--- Sample responses ---")
-                print("Response indices: {}".format(response_indices[:10]))
-                print("Human scores: {}".format(human_scores[:10]))
-                print("Framework scores: {}".format(framework_scores[:10]))
-                print("-------------------------\n")
-
-            human_framework_correlations = self._compute_correlations_for_all_dims(framework_scores, human_scores, self.dimension_map)
-
-            if print_statements:
-                print("--- Computed correlations ---")
-                print("Dataset: {}".format(self.data_collector.get_name()))
-                print("Split: {}".format(self.data_collector.dataset_split))
-                print("Model: {}".format(model))
+                print("Models: {}".format(self.model_candidates))
                 print("Framework: {}".format(self.desired_framework.get_name()))
                 print("{} correlation -- {} level".format(self.correlation_score, self.correlation_level))
-                print("# Samples: {}".format(len(framework_scores)))
-                for dim in self.desired_dimensions:
-                    print("Correlation {}-{}: {}".format(dim, self.dimension_map[dim], human_framework_correlations[dim + "-" + self.dimension_map[dim]]))
-                    print("Average {}: {}".format(dim, np.mean([score[dim] for score in framework_scores])))
-                    print("Average human {}: {}".format(self.dimension_map[dim], np.mean([score[self.dimension_map[dim]] for score in human_scores])))
-                    print("-----------------------------\n")
-
-            all_human_framework_correlations.append(human_framework_correlations)
+                for entry in system_correlations:
+                    print("Correlation {}: {}".format(entry, system_correlations[entry]))
 
         return all_human_framework_correlations
+
+
+    def _get_framework_scores(self, model, reference_responses, turn_historys, knowledge_contexts, model_responses, response_indices):
+        # filter out all model responses which are set to None first
+        
+        existing_framework_scores = self._load_scores_from_storage(model)
+        existing_framework_scores = self._get_subset_of_scores_with_all_dims(existing_framework_scores, response_indices, self.desired_dimensions)
+
+        new_response_indices, new_model_responses, new_reference_responses, new_turn_historys, new_knowledge_contexts = self.get_new_contexts_only(existing_framework_scores, response_indices, reference_responses, turn_historys, knowledge_contexts, model_responses)
+
+        new_framework_scores = self._evaluate_framework(new_model_responses, new_response_indices, new_reference_responses, new_turn_historys, new_knowledge_contexts, model)
+        framework_scores = self._merge_existing_and_new_scores(existing_framework_scores, new_framework_scores)
+        self._write_scores_to_storage(framework_scores, model)
+        return framework_scores
+
+
+    def compute_sample_correlation_for_model(self, model_responses, response_indices, reference_responses, turn_historys, knowledge_contexts, model, print_statements):
+
+        if self.desired_framework.reference_required and reference_responses is None:
+            raise ValueError("Reference responses are required for the selected evaluation framework.")
+
+        framework_scores = self._get_framework_scores(model, reference_responses, turn_historys, knowledge_contexts, model_responses, response_indices)
+        human_scores = self.eval_collector.extract_ratings_for_sample_indices(response_indices, self.dimension_map.values(), model)
+
+        if print_statements:
+            print("--- Sample responses ---")
+            print("Response indices: {}".format(response_indices[:10]))
+            print("Human scores: {}".format(human_scores[:10]))
+            print("Framework scores: {}".format(framework_scores[:10]))
+            print("-------------------------\n")
+
+        human_framework_correlations = self._compute_correlations_for_all_dims(framework_scores, human_scores, self.dimension_map)
+
+        if print_statements:
+            print("Model: {}".format(model))
+            print("Framework: {}".format(self.desired_framework.get_name()))
+            print("{} correlation -- {} level".format(self.correlation_score, self.correlation_level))
+            print("# Samples: {}".format(len(framework_scores)))
+            for dim in self.desired_dimensions:
+                print("Correlation {}-{}: {}".format(dim, self.dimension_map[dim], human_framework_correlations[dim + "-" + self.dimension_map[dim]]))
+                print("Average {}: {}".format(dim, np.mean([score[dim] for score in framework_scores])))
+                print("Average human {}: {}".format(self.dimension_map[dim], np.mean([score[self.dimension_map[dim]] for score in human_scores])))
+                print("-----------------------------\n")
+
+        return human_framework_correlations
     
-    def _get_subsest_of_scores_with_all_dims(self, existing_framework_scores, response_indices, desired_dimensions):
+    def _get_subset_of_scores_with_all_dims(self, existing_framework_scores, response_indices, desired_dimensions):
         # only if all dimensions from desired_dimensions are available for a sample, we can use the existing score
         existing_framework_scores = [score for score in existing_framework_scores if score["response_index"] in response_indices and all(dim in score for dim in desired_dimensions)]
         return existing_framework_scores

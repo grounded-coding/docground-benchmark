@@ -15,11 +15,11 @@ class TestEvalCollector(unittest.TestCase):
 
     def test_extract_ratings(self):
         sample_indices = [7, 18]
-        human_rating_1 = self.dstc_eval_collector.extract_ratings(sample_indices, human_dims=["accuracy", "appropriateness"])
+        human_rating_1 = self.dstc_eval_collector.extract_ratings_for_sample_indices(sample_indices, human_dims=["accuracy", "appropriateness"])
         self.assertEqual(len(human_rating_1), len(sample_indices))
 
         sample_indices = [7, 13, 14, 15, 16]
-        human_rating_2 = self.begin_eval_collector.extract_ratings(sample_indices, human_dims=["accuracy", "appropriateness"])
+        human_rating_2 = self.begin_eval_collector.extract_ratings_for_sample_indices(sample_indices, human_dims=["accuracy", "appropriateness"])
         self.assertEqual(len(human_rating_2), len(sample_indices))
 
 

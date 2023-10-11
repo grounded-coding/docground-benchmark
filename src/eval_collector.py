@@ -11,7 +11,7 @@ class HumanEvalCollector(ABC):
     def __init__(self):
         pass
 
-    def extract_ratings(self):
+    def extract_ratings_for_sample_indices(self, model=""):
         pass
 
     def get_subset_with_human_eval(self, sample_indices, model_responses, exclude_rating=None):
@@ -26,7 +26,7 @@ class HumanEvalCollector(ABC):
 
 class DummyEvalCollector(HumanEvalCollector):    
 
-    def extract_ratings(self, sample_indices, human_dims=None):
+    def extract_ratings_for_sample_indices(self, sample_indices, human_dims=None, only_model=""):
         # create a list with dictionaries of length sample_indices where each dictionary contains random ratings for each dimension
         human_scores = []
         for i in range(len(sample_indices)):
@@ -63,7 +63,12 @@ class DialDocEvalCollector(HumanEvalCollector):
                 pass
         return sample_indices_f, model_responses_f
 
-    def extract_ratings(self, sample_indices, human_dims=["appropriateness", "groundedness"]):
+    def extract_ratings_for_sample_indices(self, sample_indices, human_dims=["appropriateness", "groundedness"], only_model=""):
+        """
+        Important note: If only_model is set, the human ratings are only extracted for the specified model.
+        This means that INDICES DO NOT CORRESPOND TO THE SAMPLE INDICES ANYMORE!
+        Should ONLY be used for aggregations, averages etc. where the indices are not important.
+        """
         ratings = []
         human_evals = self.human_eval
         
@@ -71,25 +76,26 @@ class DialDocEvalCollector(HumanEvalCollector):
             if human_evals.iloc[sample_index] is not None:
                 rating = {}
                 for dim in human_dims:
-                    if dim == "appropriateness":
-                        rating[dim] = human_evals.loc[(human_evals["Input.cond_sys"] == human_evals.iloc[sample_index]["Input.cond_sys"]) &\
-                                                       (human_evals["Input.ex_id"] == human_evals.iloc[sample_index]["Input.ex_id"])]["Answer.score_appropriateness"].mean()
-                    else:
-                        rating[dim] = human_evals.loc[(human_evals["Input.cond_sys"] == human_evals.iloc[sample_index]["Input.cond_sys"]) &\
-                                                       (human_evals["Input.ex_id"] == human_evals.iloc[sample_index]["Input.ex_id"])]["Answer.match_ref"].mean()
+                    mapped_dim = "Answer.match_ref" if dim == "groundedness" else "Answer.score_appropriateness"
+                    try:
+                        selected_rows = human_evals.loc[(human_evals['Input.ex_id'] == human_evals.iloc[sample_index]['Input.ex_id']) &
+                            (human_evals['Input.cond_sys'] == only_model)]
+                        avg_rating = selected_rows[mapped_dim].mean()
+                        rating[dim] = avg_rating
+                    except:
+                        rating[dim] = None
                 ratings.append(rating)
-            else:
-                raise ValueError("No human ratings for sample {}".format(sample_index))
         return ratings
     
 
 class BEGINHumanEvalCollector(HumanEvalCollector):
+    # TODO Fix only_model sample index subset like for DialDoc
     def __init__(self, human_eval_path):
         super().__init__()
         # read from human eval path the file wh ich is a tsv file with columns_ id, model_name, data_source, knowledge_message, response, begin_label
         self.human_eval = pd.read_csv(human_eval_path, sep='\t')
 
-    def extract_ratings(self, sample_indices, human_dims=["attributability"], numeric=True):
+    def extract_ratings_for_sample_indices(self, sample_indices, human_dims=["attributability"], numeric=True, only_model=""):
         ratings = []
         human_evals = self.human_eval
 
@@ -143,11 +149,15 @@ class BEGINHumanEvalCollector(HumanEvalCollector):
 
 
 class DSTCHumanEvalCollector(HumanEvalCollector):
-    def __init__(self, human_eval_path):
+    def __init__(self, human_eval_paths):
         super().__init__()
-        self.human_evals = load_data(human_eval_path)
+        data_human_map = {}
+        for model in human_eval_paths:
+            human_eval_path = human_eval_paths[model]
+            data_human_map[model] = load_data(human_eval_path)
+        self.data_human_map = data_human_map
 
-    def extract_ratings(self, sample_indices, human_dims=["accuracy", "appropriateness"]):
+    def extract_ratings_for_sample_indices(self, sample_indices, human_dims=["accuracy", "appropriateness"], only_model=""):
         """
         Extracts human ratings from the DSTC human evaluation file
         :param sample_indices: The indices of the samples for which the ratings should be extracted, should never be NONE
@@ -157,7 +167,8 @@ class DSTCHumanEvalCollector(HumanEvalCollector):
         """
         ratings = []
         valid_rating = 0
-        human_evals = self.human_evals
+
+        human_evals = self.data_human_map[only_model]
 
         for sample_index in sample_indices:
             if human_evals[sample_index] is not None:
@@ -169,17 +180,17 @@ class DSTCHumanEvalCollector(HumanEvalCollector):
                 ratings.append(rating)
                 valid_rating += 1
             else:
-                raise ValueError("No human ratings for sample {}".format(sample_index))
+                # Warn the user that there is no human rating for this sample and skip it
+                print("No human rating for sample {} - ONLY PROCEED FOR SYSTEM CORRELATIONS".format(sample_index))
 
-        # print("Candidate has received {} valid ratings".format(valid_rating))            
         return ratings
 
-    def get_subset_with_human_eval(self, sample_indices, candidate_responses=None, exclude_rating=None):
+    def get_subset_with_human_eval(self, sample_indices, candidate_responses=None, exclude_rating=None, model="baseline"):
         """
         Provided with a list of indices that contain responses for the chosen dataset, this function returns a subset of indices that have human ratings"""
         human_eval_indices = []
         model_responses = []
-        human_evals = self.human_evals
+        human_evals = self.data_human_map[model]
         if exclude_rating is not None:
             raise NotImplementedError("Excluding ratings is not implemented for DSTC yet")
         for j, index in enumerate(sample_indices):
@@ -197,12 +208,12 @@ class DSTCHumanEvalCollector(HumanEvalCollector):
 
 
 class TopicalChatEvalCollector(HumanEvalCollector):
-
+    # TODO Fix only_model sample index subset like for DialDoc
     def __init__(self, human_eval_path):
         super().__init__()
         self.human_eval = load_data(human_eval_path)
         
-    def extract_ratings(self, sample_indices, human_dims=["understandability", "naturalness", "coherence", "engagingness", "groundedness", "overall"]):
+    def extract_ratings_for_sample_indices(self, sample_indices, human_dims=["understandability", "naturalness", "coherence", "engagingness", "groundedness", "overall"], only_model=""):
         ratings = []
         human_evals = self.human_eval
         

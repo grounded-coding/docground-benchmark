@@ -11,7 +11,7 @@ from collections import Counter
 from uni_eval.evaluator import get_evaluator
 from lleval.evaluator import PromptTemplate, DialogEvaluator
 from rouge_score import rouge_scorer
-
+from src.openai_scorer import OpenAIScorer
 
 
 class EvaluationFramework(ABC):
@@ -64,9 +64,27 @@ class LLEval(EvaluationFramework):
 
     def evaluate(self, model_responses, reference_responses, turn_historys, knowledge_contexts, dims):
         data = convert_to_json(output_list=model_responses, src_list=turn_historys, context_list=knowledge_contexts)
-        prompt_template = PromptTemplate("configs/prompt_likert_config.json")
-        llama2local = PromptScorer(api_url="http://gpu-19.apptek.local:8080/generate", metric_config_file="configs/gen_config.json", prompt_template=prompt_template, num_retries=3)
+        prompt_template = PromptTemplate("configs/llama2/prompt_likert_config.json")
+        llama2local = PromptScorer(api_url="http://gpu-19.apptek.local:8080/generate", metric_config_file="configs/llama2/gen_config.json", prompt_template=prompt_template, num_retries=3)
         evaluator = DialogEvaluator(llama2local, dimension_definitions_file="configs/dimension_definitions.json")
+        eval_scores, eval_expls = evaluator.evaluate(data, print_result=True, dims=dims)
+        merged_scores = []
+        for i, score in enumerate(eval_scores):
+            for key in eval_expls[i].keys():
+                score[key + "_expl"] = eval_expls[i][key]
+            merged_scores.append(score)
+        return merged_scores
+
+
+class GEval(EvaluationFramework):
+    def __init__(self):
+        super().__init__(['appropriate', 'accurate', 'grounded'])
+
+    def evaluate(self, model_responses, reference_responses, turn_historys, knowledge_contexts, dims):
+        data = convert_to_json(output_list=model_responses, src_list=turn_historys, context_list=knowledge_contexts)
+        prompt_template = PromptTemplate("configs/gpt3/prompt_likert_config.json")
+        gptmodel = OpenAIScorer(metric_config_file="configs/gpt3/gen_config.json", prompt_template=prompt_template, num_retries=3)
+        evaluator = DialogEvaluator(gptmodel, dimension_definitions_file="configs/dimension_definitions.json")
         eval_scores, eval_expls = evaluator.evaluate(data, print_result=True, dims=dims)
         merged_scores = []
         for i, score in enumerate(eval_scores):
