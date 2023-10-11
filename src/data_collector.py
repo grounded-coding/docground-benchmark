@@ -46,7 +46,6 @@ class DataCollector(ABC):
 
     @abstractmethod
     def get_pred_responses(self, sample_indices, model_candidates) -> List[Dict[str, str]]:
-        # TODO implement proper multiple model candidate selection for all collectors
         pass
 
 
@@ -120,12 +119,8 @@ class BEGINDataCollector(DataCollector):
         data = pd.read_csv(f'{self.dataset}/begin_{self.dataset_split}_{self.dataset_name}.tsv', sep='\t')
 
         for index in sample_indices:
-            # the pandas dataframe contains a knowledge column with one knowledge document
-            # it also contains  a message column with a single-turn turn history
-            # there are no reference responses
             cur_knowledge = data.iloc[index]["knowledge"]
             cur_message = data.iloc[index]["message"]
-            # if cur_message is NaN, replace it with an empty string
             if pd.isna(cur_message):
                 cur_message = ""
             turn_historys.append([cur_message])
@@ -136,7 +131,7 @@ class BEGINDataCollector(DataCollector):
 
 class DialDocDataCollector(DataCollector):
     """
-    Collect sample contexts for the DialDoc dataset int he format of TU Braunschweig 2023."""
+    Collect sample contexts for the DialDoc dataset in the format of TU Braunschweig 2023."""
 
     def __init__(self, dataset_path) -> None:
         super().__init__(dataset=dataset_path, dataset_split="", dataset_name="dialdoc_tu_2023")
@@ -256,7 +251,6 @@ class DSTCDataCollector(DataCollector):
         return sample_indices
 
     def get_pred_responses(self, sample_indices, model_candidates):
-        # TODO FIX the "" handling 
         model_responses = []
         for index in sample_indices:
             entrys = {}

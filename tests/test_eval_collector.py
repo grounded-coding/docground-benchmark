@@ -8,14 +8,14 @@ import unittest
 
 class TestEvalCollector(unittest.TestCase):
     def setUp(self):
-        self.dstc_eval_path = "tests/static/entry0.human_eval.json"
+        self.dstc_eval_paths = {"base": "tests/static/entry0.human_eval.json"}
         self.begin_eval_path = "tests/static/begin_dev_cmu.tsv"
-        self.dstc_eval_collector = DSTCHumanEvalCollector(self.dstc_eval_path)
+        self.dstc_eval_collector = DSTCHumanEvalCollector(self.dstc_eval_paths)
         self.begin_eval_collector = BEGINHumanEvalCollector(self.begin_eval_path)
 
     def test_extract_ratings(self):
         sample_indices = [7, 18]
-        human_rating_1 = self.dstc_eval_collector.extract_ratings_for_sample_indices(sample_indices, human_dims=["accuracy", "appropriateness"])
+        human_rating_1 = self.dstc_eval_collector.extract_ratings_for_sample_indices(sample_indices, human_dims=["accuracy", "appropriateness"], model="base")
         self.assertEqual(len(human_rating_1), len(sample_indices))
 
         sample_indices = [7, 13, 14, 15, 16]
