@@ -210,7 +210,6 @@ class DSTCHumanEvalCollector(HumanEvalCollector):
 
 
 class TopicalChatEvalCollector(HumanEvalCollector):
-    # TODO Fix only_model sample index subset like for DialDoc
     def __init__(self, human_eval_path):
         super().__init__()
         self.human_eval = load_data(human_eval_path)
@@ -222,7 +221,7 @@ class TopicalChatEvalCollector(HumanEvalCollector):
         for sample_index in sample_indices:
             rating = {}
             for dim in human_dims:
-                rating[dim] = float(human_evals[sample_index]["scores"][dim])
+                rating[dim] = float(human_evals[str(sample_index)][only_model]["scores"][dim])
             ratings.append(rating)
 
         return ratings

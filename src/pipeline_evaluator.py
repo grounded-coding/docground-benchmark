@@ -91,6 +91,7 @@ class PipelineEvaluator:
                         print("Model response: {}".format(model_responses[i][model]))
                         print("Turn history: {}".format(turn_historys[i]))
                         print("Knowledge context: {}".format(knowledge_contexts[i]))
+                        print("Model: {}".format(model))
                 model_sample_correlations = self.compute_sample_correlation_for_model(model_responses, response_indices, reference_responses, turn_historys, knowledge_contexts, model, print_statements)
                 all_human_framework_correlations.append(model_sample_correlations)
 
@@ -138,7 +139,7 @@ class PipelineEvaluator:
         return all_human_framework_correlations
 
 
-    def _get_framework_scores(self, model, reference_responses, turn_historys, knowledge_contexts, model_responses, response_indices):        
+    def _get_framework_scores(self, model, reference_responses, turn_historys, knowledge_contexts, model_responses, response_indices): 
         existing_framework_scores = self._load_scores_from_storage(model)
         existing_framework_scores = self._get_subset_of_scores_with_all_dims(existing_framework_scores, response_indices, self.desired_dimensions)
 
@@ -168,7 +169,6 @@ class PipelineEvaluator:
         human_framework_correlations = self._compute_correlations_for_all_dims(framework_scores, human_scores, self.dimension_map)
 
         if print_statements:
-            print("Model: {}".format(model))
             print("Framework: {}".format(self.desired_framework.get_name()))
             print("# Samples: {}".format(len(framework_scores)))
             for dim in self.desired_dimensions:

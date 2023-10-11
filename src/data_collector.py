@@ -376,7 +376,7 @@ class TopicalChatDataCollector(DataCollector):
         """
         sample_indices = []
         j = 0
-        with open(f'{self.dataset}/topical_chat.json') as f:
+        with open(f'{self.dataset}/restructured.json') as f:
             labels = json.load(f)
             for i in range(len(labels)):
                 sample_indices.append(i)
@@ -386,23 +386,25 @@ class TopicalChatDataCollector(DataCollector):
         return sample_indices
 
     def get_pred_responses(self, sample_indices, model_candidates):
-        candidate = model_candidates[0]
-        pred_data = load_data(f'{self.dataset}/topical_chat.json')
+        pred_data = load_data(f'{self.dataset}/restructured.json')
         model_responses = []
         for index in sample_indices:
-            x = pred_data[index]
-            model_responses.append({candidate: x["system_output"]})
+            entrys = {}
+            for model in model_candidates:
+                x = pred_data[f"{index}"]
+                entrys[model] = x[model]["system_output"]
+            model_responses.append(entrys)
         return model_responses
 
     def collect_sample_contexts(self, sample_indices: List[int]) -> Tuple[List[int], List[List[str]], List[List[str]]]:
         reference_responses = None
         turn_historys = []
         knowledge_contexts = []
-        with open(f'{self.dataset}/topical_chat.json') as f:
+        with open(f'{self.dataset}/restructured.json') as f:
             data = json.load(f)
             for index in sample_indices:
-                cur_knowledge = data[index]['context']
-                turn_history = data[index]['source']
+                cur_knowledge = data[str(index)]["Original Ground Truth"]['context']
+                turn_history = data[str(index)]["Original Ground Truth"]['source']
                 if cur_knowledge == "_nofact\n":
                     cur_knowledge = ""
                 # turn historys are separated by \n. the ending is marked by \n\n so it will look like
