@@ -89,7 +89,7 @@ class PipelineEvaluator:
                 for model in self.model_candidates:
                     response_indices, model_responses = self.eval_collector.get_subset_with_human_eval(response_indices, model_responses, exclude_rating=exclude_rating, model=model)
                     reference_responses, turn_historys, knowledge_contexts = self.data_collector.collect_sample_contexts(response_indices)
-                    framework_scores = self._get_framework_scores(model, reference_responses, turn_historys, knowledge_contexts, model_responses, response_indices)
+                    framework_scores = self._get_framework_scores(response_indices, model, reference_responses, turn_historys, knowledge_contexts, model_responses)
                     human_scores = self.eval_collector.extract_ratings_for_sample_indices(response_indices, self.dimension_map.values(), model)
 
                     framework_scores_dim = np.array([score[framework_dim] for score in framework_scores])
@@ -135,7 +135,7 @@ class PipelineEvaluator:
         if self.desired_framework.reference_required and reference_responses is None:
             raise ValueError("Reference responses are required for the selected evaluation framework.")
 
-        framework_scores = self._get_framework_scores(model, reference_responses, turn_historys, knowledge_contexts, model_responses, response_indices)
+        framework_scores = self._get_framework_scores(response_indices, model, reference_responses, turn_historys, knowledge_contexts, model_responses)
         human_scores = self.eval_collector.extract_ratings_for_sample_indices(response_indices, self.dimension_map.values(), model)
 
         if print_statements and False:
@@ -157,15 +157,17 @@ class PipelineEvaluator:
 
         return human_framework_correlations
 
-    def _get_framework_scores(self, model, reference_responses, turn_historys, knowledge_contexts, model_responses, response_indices): 
+    def _get_framework_scores(self, response_indices, model, reference_responses, turn_historys, knowledge_contexts, model_responses): 
         existing_framework_scores = self._load_scores_from_storage(model)
-        existing_framework_scores = self._get_subset_of_scores_with_all_dims(existing_framework_scores, response_indices, self.desired_dimensions)
+        existing_framework_scores = self._get_subset_of_scores_with_all_dims(existing_framework_scores, self.desired_dimensions)
 
         new_response_indices, new_model_responses, new_reference_responses, new_turn_historys, new_knowledge_contexts = self.get_new_contexts_only(existing_framework_scores, response_indices, reference_responses, turn_historys, knowledge_contexts, model_responses)
-
         new_framework_scores = self._evaluate_framework(new_model_responses, new_response_indices, new_reference_responses, new_turn_historys, new_knowledge_contexts, model)
+        
         framework_scores = self._merge_existing_and_new_scores(existing_framework_scores, new_framework_scores)
         self._write_scores_to_storage(framework_scores, model)
+        # keep only the scores for the desired response indices
+        framework_scores = [score for score in framework_scores if score["response_index"] in response_indices]
         return framework_scores
 
     def _load_scores_from_storage(self, model=""):
@@ -186,9 +188,9 @@ class PipelineEvaluator:
         with open(score_path, "w") as write_file:
             json.dump(framework_scores, write_file)
     
-    def _get_subset_of_scores_with_all_dims(self, existing_framework_scores, response_indices, desired_dimensions):
+    def _get_subset_of_scores_with_all_dims(self, existing_framework_scores, desired_dimensions):
         # only if all dimensions from desired_dimensions are available for a sample, we can use the existing score
-        existing_framework_scores = [score for score in existing_framework_scores if score["response_index"] in response_indices and all(dim in score for dim in desired_dimensions)]
+        existing_framework_scores = [score for score in existing_framework_scores if all(dim in score for dim in desired_dimensions)]
         return existing_framework_scores
 
     def _merge_existing_and_new_scores(self, existing_framework_scores, new_framework_scores):
