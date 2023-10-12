@@ -178,8 +178,7 @@ class DSTCHumanEvalCollector(HumanEvalCollector):
                     rating[dim] = np.mean(rating[dim])
                 ratings.append(rating)
             else:
-                for dim in human_dims:
-                    rating[dim] = 3
+                raise ValueError("No human ratings for sample {}".format(sample_index))
         return ratings
 
     def get_subset_with_human_eval(self, sample_indices, candidate_responses=None, exclude_rating=None, model="baseline"):
