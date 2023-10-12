@@ -30,30 +30,11 @@ class PipelineEvaluator:
         if correlation_level == 'system' and len(model_candidates) < 2:
             raise ValueError("For system-level correlation, at least 2 model candidates are required.")
 
-    def _load_scores_from_storage(self, model=""):
-        score_path = Path("outputs") / self.data_collector.get_name() / self.data_collector.dataset_split / model \
-                     / (self.desired_framework.get_name() + ".json")
-        if score_path.is_file():
-            with open(score_path, "r") as read_file:
-                framework_scores = json.load(read_file)
-        else:
-            framework_scores = []
-
-        score_path.parent.mkdir(parents=True, exist_ok=True)
-        return framework_scores
-
-    def _write_scores_to_storage(self, framework_scores, model=""):
-        score_path = Path("outputs") / self.data_collector.get_name() / self.data_collector.dataset_split / model \
-                / (self.desired_framework.get_name() + ".json")
-        with open(score_path, "w") as write_file:
-            json.dump(framework_scores, write_file)
-
     def get_new_contexts_only(self, existing_framework_scores, response_indices, reference_responses, turn_historys, knowledge_contexts, model_responses):
         """
         Filters response indices, model responses, reference responses, turn historys and knowledge contexts for some model to only those that havent been evaluated yet.
         """
         new_response_indices = []
-        reference_responses = []
         for i, response_index in enumerate(response_indices):
             # if for any dimension that we are evaluating the score is not available yet for this sample, we also need to evaluate again
             for dim in self.desired_dimensions:
@@ -94,8 +75,13 @@ class PipelineEvaluator:
                         print("Model: {}".format(model))
                 model_sample_correlations = self.compute_sample_correlation_for_model(model_responses, response_indices, reference_responses, turn_historys, knowledge_contexts, model, print_statements)
                 all_human_framework_correlations.append(model_sample_correlations)
+            # Print the averaged correlations over all models
+            avg_correlations = {}
+            for dim in self.desired_dimensions:
+                avg_correlations[dim] = np.mean([correlations[dim + "-" + self.dimension_map[dim]] for correlations in all_human_framework_correlations])
+                print("Average correlation {}: {}".format(dim, avg_correlations[dim]))
 
-        else:
+        elif self.correlation_level == 'system':
             avg_scores = {}
             for framework_dim in self.desired_dimensions:
                 human_dim = self.dimension_map[framework_dim]
@@ -112,21 +98,7 @@ class PipelineEvaluator:
                     avg_scores[framework_dim][1].append(np.mean(framework_scores_dim))
 
             # Compute the actual system level correlations
-            system_correlations = {}
-            for framework_dim in self.desired_dimensions:
-                human_dim = self.dimension_map[framework_dim]
-                key = framework_dim + "-" + human_dim
-                human_scores_dim, framework_scdim = avg_scores[framework_dim]
-
-                if self.correlation_score == 'spearman':
-                    spearman_corr, _ = spearmanr(human_scores_dim, framework_scdim)
-                    system_correlations[key] = spearman_corr
-                elif self.correlation_score == 'kendall':
-                    kendall_corr, _ = kendalltau(human_scores_dim, framework_scdim)
-                    system_correlations[key] = kendall_corr
-                elif self.correlation_score == 'pearson':
-                    pearson_corr, _ = pearsonr(human_scores_dim, framework_scdim)
-                    system_correlations[key] = pearson_corr
+            system_correlations = self.compute_system_correlation(avg_scores)
             all_human_framework_correlations.append(system_correlations)
 
             if print_statements:
@@ -135,21 +107,28 @@ class PipelineEvaluator:
                 for entry in system_correlations:
                     print("Correlation {}: {}".format(entry, system_correlations[entry]))
 
+        else:
+            raise ValueError("Unknown correlation level.")
         print("-----------------------------\n")
         return all_human_framework_correlations
 
+    def compute_system_correlation(self, avg_scores):
+        system_correlations = {}
+        for framework_dim in self.desired_dimensions:
+            human_dim = self.dimension_map[framework_dim]
+            key = framework_dim + "-" + human_dim
+            human_scores_dim, framework_scdim = avg_scores[framework_dim]
 
-    def _get_framework_scores(self, model, reference_responses, turn_historys, knowledge_contexts, model_responses, response_indices): 
-        existing_framework_scores = self._load_scores_from_storage(model)
-        existing_framework_scores = self._get_subset_of_scores_with_all_dims(existing_framework_scores, response_indices, self.desired_dimensions)
-
-        new_response_indices, new_model_responses, new_reference_responses, new_turn_historys, new_knowledge_contexts = self.get_new_contexts_only(existing_framework_scores, response_indices, reference_responses, turn_historys, knowledge_contexts, model_responses)
-
-        new_framework_scores = self._evaluate_framework(new_model_responses, new_response_indices, new_reference_responses, new_turn_historys, new_knowledge_contexts, model)
-        framework_scores = self._merge_existing_and_new_scores(existing_framework_scores, new_framework_scores)
-        self._write_scores_to_storage(framework_scores, model)
-        return framework_scores
-
+            if self.correlation_score == 'spearman':
+                spearman_corr, _ = spearmanr(human_scores_dim, framework_scdim)
+                system_correlations[key] = spearman_corr
+            elif self.correlation_score == 'kendall':
+                kendall_corr, _ = kendalltau(human_scores_dim, framework_scdim)
+                system_correlations[key] = kendall_corr
+            elif self.correlation_score == 'pearson':
+                pearson_corr, _ = pearsonr(human_scores_dim, framework_scdim)
+                system_correlations[key] = pearson_corr
+        return system_correlations
 
     def compute_sample_correlation_for_model(self, model_responses, response_indices, reference_responses, turn_historys, knowledge_contexts, model, print_statements):
 
@@ -177,6 +156,35 @@ class PipelineEvaluator:
                 print("Average human {}: {}".format(self.dimension_map[dim], np.mean([score[self.dimension_map[dim]] for score in human_scores])))
 
         return human_framework_correlations
+
+    def _get_framework_scores(self, model, reference_responses, turn_historys, knowledge_contexts, model_responses, response_indices): 
+        existing_framework_scores = self._load_scores_from_storage(model)
+        existing_framework_scores = self._get_subset_of_scores_with_all_dims(existing_framework_scores, response_indices, self.desired_dimensions)
+
+        new_response_indices, new_model_responses, new_reference_responses, new_turn_historys, new_knowledge_contexts = self.get_new_contexts_only(existing_framework_scores, response_indices, reference_responses, turn_historys, knowledge_contexts, model_responses)
+
+        new_framework_scores = self._evaluate_framework(new_model_responses, new_response_indices, new_reference_responses, new_turn_historys, new_knowledge_contexts, model)
+        framework_scores = self._merge_existing_and_new_scores(existing_framework_scores, new_framework_scores)
+        self._write_scores_to_storage(framework_scores, model)
+        return framework_scores
+
+    def _load_scores_from_storage(self, model=""):
+        score_path = Path("outputs") / self.data_collector.get_name() / self.data_collector.dataset_split / model \
+                     / (self.desired_framework.get_name() + ".json")
+        if score_path.is_file():
+            with open(score_path, "r") as read_file:
+                framework_scores = json.load(read_file)
+        else:
+            framework_scores = []
+
+        score_path.parent.mkdir(parents=True, exist_ok=True)
+        return framework_scores
+
+    def _write_scores_to_storage(self, framework_scores, model=""):
+        score_path = Path("outputs") / self.data_collector.get_name() / self.data_collector.dataset_split / model \
+                / (self.desired_framework.get_name() + ".json")
+        with open(score_path, "w") as write_file:
+            json.dump(framework_scores, write_file)
     
     def _get_subset_of_scores_with_all_dims(self, existing_framework_scores, response_indices, desired_dimensions):
         # only if all dimensions from desired_dimensions are available for a sample, we can use the existing score
@@ -195,6 +203,7 @@ class PipelineEvaluator:
                 merged_scores.append(existing_score_dict)
             else:
                 merged_scores.append({**existing_score_dict, **new_score_dict})
+        merged_scores = sorted(merged_scores, key=lambda k: k['response_index'])
         return merged_scores
 
 

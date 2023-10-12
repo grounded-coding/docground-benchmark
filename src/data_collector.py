@@ -105,7 +105,6 @@ class BEGINDataCollector(DataCollector):
     def get_pred_responses(self, sample_indices, model_candidates=["baseline"]):
         candidate = model_candidates[0]
         pred_data = pd.read_csv(f'{self.dataset}/begin_{self.dataset_split}_{self.dataset_name}.tsv', sep='\t')
-        # Get response entries as a list for all provided sample indices from pred_data. pred_data is a pandas dataframe with column name response
         model_responses = []
         for index in sample_indices:
             x = pred_data.iloc[index]
@@ -227,7 +226,7 @@ class DSTCDataCollector(DataCollector):
             pred_map[model] = load_data(human_eval_path)
         self.pred_map = pred_map
 
-    def get_samples_with_target(self, n=-1) -> Tuple[
+    def get_samples_with_target(self, n=-1, models=[]) -> Tuple[
         List[int], List[str]]:
         """
         Get all samples with target set to True.
@@ -391,7 +390,7 @@ class TopicalChatDataCollector(DataCollector):
         return model_responses
 
     def collect_sample_contexts(self, sample_indices: List[int]) -> Tuple[List[int], List[List[str]], List[List[str]]]:
-        reference_responses = None
+        reference_responses = []
         turn_historys = []
         knowledge_contexts = []
         with open(f'{self.dataset}/restructured.json') as f:
@@ -407,5 +406,6 @@ class TopicalChatDataCollector(DataCollector):
                 
                 # for knowledge we need to remove the ending marked by \n
                 knowledge_contexts.append([cur_knowledge[:-1]])
+                reference_responses.append(data[str(index)]["Original Ground Truth"]["system_output"])
                 turn_historys.append(turn_history)
         return reference_responses, turn_historys, knowledge_contexts
