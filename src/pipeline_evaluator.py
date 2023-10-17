@@ -12,7 +12,7 @@ import json
 class PipelineEvaluator:
     def __init__(self, desired_framework: EvaluationFramework, eval_collector: HumanEvalCollector,
                  data_collector: DataCollector, desired_dimensions: list,
-                 dimension_map, correlation_type, correlation_level, model_candidates: list):
+                 dimension_map, correlation_type=None, correlation_level=None, model_candidates=[]):
         self.correlation_score = correlation_type
         self.data_collector = data_collector
         self.correlation_level = correlation_level
@@ -54,16 +54,20 @@ class PipelineEvaluator:
         reference_responses = None
         all_human_framework_correlations = []
 
-        print("--- {} correlation -- {} level ---".format(self.correlation_score, self.correlation_level))
+        print("\n-----------------------------")
+        print("{} corr. -- {} level".format(self.correlation_score, self.correlation_level))
         print("Dataset: {}".format(self.data_collector.get_name()))
         print("Split: {}".format(self.data_collector.dataset_split))
+        print("Framework: {:<20}".format(self.desired_framework.get_name()))
+        print("Models: {}".format(self.model_candidates))
         print("-----------------------------\n")
 
-        if self.correlation_level == 'sample':
+        if self.correlation_level in [None, "sample"]:
             all_framework_scores = []
             all_human_scores = []
             for model in self.model_candidates:
-                response_indices, model_responses = self.eval_collector.get_subset_with_human_eval(response_indices, model_responses, exclude_rating=exclude_rating, model=model)
+                if self.correlation_level == "sample":
+                    response_indices, model_responses = self.eval_collector.get_subset_with_human_eval(response_indices, model_responses, exclude_rating=exclude_rating, model=model)
                 reference_responses, turn_historys, knowledge_contexts = self.data_collector.collect_sample_contexts(response_indices)
                 if verbose:
                     print("--- Sample contexts ---")
@@ -76,11 +80,20 @@ class PipelineEvaluator:
                         print("Knowledge context: {}".format(knowledge_contexts[i]))
                         print("Model: {}".format(model))
                 framework_scores = self._get_framework_scores(response_indices, model, reference_responses, turn_historys, knowledge_contexts, model_responses)
-                human_scores = self.eval_collector.extract_ratings_for_sample_indices(response_indices, self.dimension_map.values(), model)
+                for dim in self.desired_dimensions:
+                    print("{} - Avg. framework {}: {:>10}".format(model, dim, round(np.mean([score[dim] for score in framework_scores]), 2)))
+                if self.correlation_level == 'sample':
+                    human_scores = self.eval_collector.extract_ratings_for_sample_indices(response_indices, self.dimension_map.values(), model)
+                    all_human_scores += human_scores
                 all_framework_scores += framework_scores
-                all_human_scores += human_scores
-            model_sample_correlations = self.compute_sample_correlation(all_framework_scores, all_human_scores, print_statements)
-            all_human_framework_correlations.append(model_sample_correlations)
+            if self.correlation_level == 'sample':
+                model_sample_correlations = self.compute_sample_correlation(all_framework_scores, all_human_scores, print_statements)
+                all_human_framework_correlations.append(model_sample_correlations)
+            if print_statements:
+                print("# Samples: {:<20}".format(len(framework_scores)))
+                for dim in self.desired_dimensions:
+                    if self.correlation_level == 'sample':
+                        print("Avg. human {}: {:>10}".format(self.dimension_map[dim], round(np.mean([score[self.dimension_map[dim]] for score in all_human_scores]), 2)))
 
         elif self.correlation_level == 'system':
             avg_scores = {}
@@ -98,19 +111,17 @@ class PipelineEvaluator:
                     avg_scores[framework_dim][0].append(np.mean(human_scores_dim))
                     avg_scores[framework_dim][1].append(np.mean(framework_scores_dim))
 
-            # Compute the actual system level correlations
             system_correlations = self.compute_system_correlation(avg_scores)
             all_human_framework_correlations.append(system_correlations)
 
             if print_statements:
-                print("Models: {}".format(self.model_candidates))
-                print("Framework: {}".format(self.desired_framework.get_name()))
-                for entry in system_correlations:
-                    print("Correlation {}: {}".format(entry, system_correlations[entry]))
+                for dim in self.desired_dimensions:
+                    print("CORR. {}-{}: {:>10}".format(dim, self.dimension_map[dim], round(system_correlations[dim + "-" + self.dimension_map[dim]], 2)))
+                    print("P-VAL. {}-{}: {:>10}".format(dim, self.dimension_map[dim], round(system_correlations[dim + "-" + self.dimension_map[dim] + "-p"], 2)))
+                    print("---")
 
         else:
-            raise ValueError("Unknown correlation level.")
-        print("-----------------------------\n")
+            raise ValueError("Correlation level {} not supported.".format(self.correlation_level))
         return all_human_framework_correlations
 
     def compute_system_correlation(self, avg_scores):
@@ -121,14 +132,15 @@ class PipelineEvaluator:
             human_scores_dim, framework_scdim = avg_scores[framework_dim]
 
             if self.correlation_score == 'spearman':
-                spearman_corr, _ = spearmanr(human_scores_dim, framework_scdim)
+                spearman_corr, p = spearmanr(human_scores_dim, framework_scdim)
                 system_correlations[key] = spearman_corr
             elif self.correlation_score == 'kendall':
-                kendall_corr, _ = kendalltau(human_scores_dim, framework_scdim)
+                kendall_corr, p = kendalltau(human_scores_dim, framework_scdim)
                 system_correlations[key] = kendall_corr
             elif self.correlation_score == 'pearson':
-                pearson_corr, _ = pearsonr(human_scores_dim, framework_scdim)
+                pearson_corr, p = pearsonr(human_scores_dim, framework_scdim)
                 system_correlations[key] = pearson_corr
+            system_correlations[key + "-p"] = p
         return system_correlations
 
     def compute_sample_correlation(self, framework_scores, human_scores, print_statements=True):
@@ -136,12 +148,11 @@ class PipelineEvaluator:
         human_framework_correlations = self._compute_correlations_for_all_dims(framework_scores, human_scores, self.dimension_map)
 
         if print_statements:
-            print("Framework: {}".format(self.desired_framework.get_name()))
-            print("# Samples: {}".format(len(framework_scores)))
+
             for dim in self.desired_dimensions:
-                print("Correlation {}-{}: {}".format(dim, self.dimension_map[dim], human_framework_correlations[dim + "-" + self.dimension_map[dim]]))
-                print("Average {}: {}".format(dim, np.mean([score[dim] for score in framework_scores])))
-                print("Average human {}: {}".format(self.dimension_map[dim], np.mean([score[self.dimension_map[dim]] for score in human_scores])))
+                print("CORR. {}-{}: {:>10}".format(dim, self.dimension_map[dim], round(human_framework_correlations[dim + "-" + self.dimension_map[dim]], 2)))
+                print("P-VAL. {}-{}: {:>10}".format(dim, self.dimension_map[dim], round(human_framework_correlations[dim + "-" + self.dimension_map[dim] + "-p"], 2)))
+                print("---")
 
         return human_framework_correlations
 
@@ -235,12 +246,13 @@ class PipelineEvaluator:
             key = framework_dim + "-" + human_dim
 
             if self.correlation_score == 'spearman':
-                spearman_corr, _ = spearmanr(human_scores_dim, framework_scores_dim)
+                spearman_corr, p = spearmanr(human_scores_dim, framework_scores_dim)
                 correlations[key] = spearman_corr
             elif self.correlation_score == 'kendall':
-                kendall_corr, _ = kendalltau(human_scores_dim, framework_scores_dim)
+                kendall_corr, p = kendalltau(human_scores_dim, framework_scores_dim)
                 correlations[key] = kendall_corr
             elif self.correlation_score == 'pearson':
-                pearson_corr, _ = pearsonr(human_scores_dim, framework_scores_dim)
+                pearson_corr, p = pearsonr(human_scores_dim, framework_scores_dim)
                 correlations[key] = pearson_corr
+            correlations[key + "-p"] = p
         return correlations

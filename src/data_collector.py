@@ -254,7 +254,10 @@ class DSTCDataCollector(DataCollector):
         for index in sample_indices:
             entrys = {}
             for candidate in model_candidates:
-                entrys[candidate] = self.pred_map[candidate][index]["response"] if self.pred_map[candidate][index]["target"] else ""
+                res = self.pred_map[candidate][index]["response"] if self.pred_map[candidate][index]["target"] else ""
+                if isinstance(res, list):
+                    res = res[0]
+                entrys[candidate] = res
             model_responses.append(entrys)
         return model_responses
 
@@ -372,8 +375,9 @@ class TopicalChatDataCollector(DataCollector):
         with open(f'{self.dataset}/restructured.json') as f:
             labels = json.load(f)
             for i in range(len(labels)):
-                sample_indices.append(i)
-                j += 1
+                if labels[str(i)]["Original Ground Truth"]["context"] != "_nofact\n":
+                    sample_indices.append(i)
+                    j += 1
                 if n > 0 and j >= n:
                     break
         return sample_indices
