@@ -112,27 +112,51 @@ class GEval(EvaluationFramework):
                 score[key + "_expl"] = eval_expls[i][key]
             merged_scores.append(score)
         return merged_scores
+
+
+class SimpleEvaluationFramework(EvaluationFramework):
+    """
+    A simple evaluation framework does not need a GPU or parallelization to run in real-time.
+    Thus we can simply loop for calculating batch scores.
+    """
+    @abstractmethod
+    def evaluate_example(self, model_response, reference_response, turn_history, knowledge_context, dims):
+        """
+        :param model_response: string
+        :param reference_response: string
+        :param turn_history: list of strings
+        :param knowledge_context: list of strings
+        :return: dictionary containing the scores where the keys are the dimensions
+        """
+        pass
+
+    def evaluate(self, model_responses, reference_responses, turn_historys, knowledge_contexts, dims):
+        scores = []
+        for response, reference, turn_history, knowledge_context in zip(model_responses, reference_responses, turn_historys, knowledge_contexts):
+            assert isinstance(response, str)
+            assert isinstance(reference, str)
+            assert isinstance(turn_history, list)
+            assert isinstance(knowledge_context, list)
+            score = self.evaluate_example(response, reference, turn_history, knowledge_context)
+            scores.append(score)
+        return scores
     
 
-class KnowledgeF1(EvaluationFramework):
+class KnowledgeF1(SimpleEvaluationFramework):
     def __init__(self):
         super().__init__(['knowledge-f1'], reference_required=False)
 
-    def evaluate(self, model_responses, reference_responses, turn_historys, knowledge_contexts, dims):
-        # Knowledge F1 is the average tokenlevel F1 overlap of the generated response and each document in the knowledge context
-        scores = []
-        for response, context in zip(model_responses, knowledge_contexts):
-            assert isinstance(response, str)
-            assert isinstance(context, list)
-            score = {}
-            for dim in dims:
-                score[dim] = np.mean([self._f1(response, doc) for doc in context])
-            scores.append(score)
-        return scores
+    def evaluate_example(self, model_response, reference_response, turn_history, knowledge_context, dims):
+        score = {}
+        for dim in dims:
+            if dim == "knowledge-f1":
+                score["knowledge-f1"] = np.mean([self._f1(model_response, doc) for doc in knowledge_context])
+            else:
+                raise NotImplementedError("Unknown dimension")
+        return score
         
     def _f1(self, response, doc):
         # Compute token-level F1 overlap between response and document
-
         response_tokens = Counter(response.lower().split())
         doc_tokens = Counter(doc.lower().split())
 
@@ -148,67 +172,60 @@ class KnowledgeF1(EvaluationFramework):
         f1_score = 2 * (precision * recall) / (precision + recall)
         return f1_score
 
-class BLEU(EvaluationFramework):
+
+class BLEU(SimpleEvaluationFramework):
     def __init__(self):
         super().__init__(['bleu-4', 'bleu-1'], reference_required=True)
 
-    def evaluate(self, model_responses, reference_responses, turn_historys, knowledge_contexts, dims):
+    def evaluate_example(self, model_response, reference_response, turn_history, knowledge_context, dims):
         bleu_metric = BleuMetric()
-        scores = []
-        assert len(model_responses) == len(reference_responses)
-        for response, reference in zip(model_responses, reference_responses):
-            assert isinstance(response, str)
-            score = {}
-            for dim in dims:
-                if dim == "bleu-4":
-                    score[dim] = bleu_metric.evaluate_example(response, reference)['bleu']
-                else:
-                    raise NotImplementedError("BLEU-1 needs a different tokenization strategy")
-                    score[dim] = sentence_bleu([reference.split()], response.split(), weights=(1, 0, 0, 0))
-            scores.append(score)
-        return scores
+        score = {}
+        for dim in dims:
+            if dim == "bleu-4":
+                score[dim] = bleu_metric.evaluate_example(model_response, reference_response)['bleu']
+            else:
+                raise NotImplementedError("BLEU-n needs a different tokenization strategy")
+        return score
 
 
-class KnowledgeBLEU(EvaluationFramework):
+class KnowledgeBLEU(SimpleEvaluationFramework):
     def __init__(self):
         super().__init__(['knowledge-bleu-4', 'knowledge-bleu-1'], reference_required=False)
 
-    def evaluate(self, model_responses, reference_responses, turn_historys, knowledge_contexts, dims):
+    def evaluate_example(self, model_response, reference_response, turn_history, knowledge_context, dims):
         bleu_metric = BleuMetric()
-        scores = []
-        assert len(model_responses) == len(knowledge_contexts)
-        for response, references in zip(model_responses, knowledge_contexts):
-            assert isinstance(response, str)
-            score = {}
-            for dim in dims:
-                if dim == "knowledge-bleu-4":
-                    score[dim] = np.mean([bleu_metric.evaluate_example(response, reference)['bleu'] for reference in references])
-                else:
-                    raise NotImplementedError("BLEU-1 needs a different tokenization strategy")
-                    score[dim] = np.mean([sentence_bleu([reference.split()], response.split(), weights=(1, 0, 0, 0)) for reference in references])
-            scores.append(score)
-        return scores
+        score = {}
+        for dim in dims:
+            if dim == "knowledge-bleu-4":
+                score[dim] = np.mean([bleu_metric.evaluate_example(model_response, doc)['bleu'] for doc in knowledge_context])
+            else:
+                raise NotImplementedError("BLEU-n needs a different tokenization strategy")
+        return score
 
 
+class METEOR(SimpleEvaluationFramework):
+    def __init__(self):
+        super().__init__(['meteor'], reference_required=True)
 
-class METEOR(EvaluationFramework):
-    def __init__(self, reference_required=True):
-        super().__init__(['meteor'], reference_required=reference_required)
-
-    def evaluate(self, model_responses, reference_responses, turn_historys, knowledge_contexts, dims):
+    def evaluate_example(self, model_response, reference_response, turn_history, knowledge_context, dims):
         met_metric = MeteorMetric()
-        met_score = met_metric.evaluate_batch(model_responses, reference_responses)['meteor'] * 100
-        return met_score
+        score = {}
+        for dim in dims:
+            if dim == "meteor":
+                score["meteor"] = met_metric.evaluate_example(model_response, reference_response)['meteor']
+            else:
+                raise NotImplementedError("Unknown dimension")
+        return score
 
 
 class ROUGE(EvaluationFramework):
-    def __init__(self, reference_required=True):
-        super().__init__(['rouge-l','rouge-1','rouge-2'], reference_required=reference_required)
+    def __init__(self):
+        super().__init__(['rouge-l','rouge-1','rouge-2'], reference_required=True)
 
-    def evaluate(self, model_responses, reference_responses, turn_historys, knowledge_contexts, dims):
-        scorer = rouge_scorer.RougeScorer(['rouge1', 'rouge2', 'rougeL'], use_stemmer=True)
-        scores = scorer.score(reference_responses, model_responses)
+    def evaluate_example(self, model_response, reference_response, turn_history, knowledge_context, dims):
+        scorer = rouge_scorer.RougeScorer(dims, use_stemmer=True)
+        scores = scorer.score(reference_response, model_response)
         rouge_scores = {}
-        for key in scores.keys():
-            rouge_scores[key] = scores[key].fmeasure * 100
+        for dim in dims:
+            rouge_scores[dim] = scores[dim].fmeasure * 100
         return rouge_scores
