@@ -15,14 +15,28 @@ from src.openai_scorer import OpenAIScorer
 
 
 class EvaluationFramework(ABC):
-    def __init__(self, available_dimensions, reference_required=False, sample_level_support=False, name=None):
+    def __init__(self, available_dimensions, reference_required=False, name=None):
+        """
+        :param available_dimensions: list of dimensions that this framework can evaluate
+        :param reference_required: whether this framework requires a reference response to evaluate
+        :param name: Name of the framework, will be used for storing results
+        """
         self.available_dimensions = available_dimensions
-        self.sample_level_support = sample_level_support
         self.reference_required = reference_required
         self.name = name
 
     @abstractmethod
     def evaluate(self, model_responses, reference_responses, turn_historys, knowledge_contexts, dims):
+        """
+        :param model_responses: list of model responses which are strings
+        :param reference_responses: list of reference responses which are strings
+        :param turn_historys: list of turn historys which are lists of strings
+        :param knowledge_contexts: list of knowledge contexts which are lists of strings
+        :param dims: list of dimensions to evaluate, must be a subset of self.available_dimensions
+        :return: list of dictionaries containing the scores where the keys are the dimensions
+
+        This method should call the evaluation framework and return the scores for the specified dimensions on each model response.
+        """
         pass
 
     def get_name(self):
