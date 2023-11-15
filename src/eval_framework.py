@@ -78,7 +78,7 @@ class DummyEval(EvaluationFramework):
 
 class LLEval(EvaluationFramework):
     def __init__(self, gen_config="configs/llama2/gen_config.json", dim_definitions="configs/dimension_definitions.json", name=None):
-        super().__init__(['appropriate', 'accurate', "grounded"], name=name)
+        super().__init__(['appropriate', 'accurate', "grounded", "coherent"], name=name)
         self.dim_definitions = dim_definitions
         self.gen_config = gen_config
 
@@ -137,7 +137,7 @@ class SimpleEvaluationFramework(EvaluationFramework):
             assert isinstance(reference, str)
             assert isinstance(turn_history, list)
             assert isinstance(knowledge_context, list)
-            score = self.evaluate_example(response, reference, turn_history, knowledge_context)
+            score = self.evaluate_example(response, reference, turn_history, knowledge_context, dims)
             scores.append(score)
         return scores
     

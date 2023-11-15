@@ -52,6 +52,7 @@ class DialDocEvalCollector(HumanEvalCollector):
             if human_evals.iloc[sample_index] is not None:
                 try:
                     sc = int(human_evals.iloc[sample_index]["Answer.match_ref"])
+                    # TODO 0: everything not fully grounded, 1: fully grounded
                     if (human_evals.iloc[sample_index]["Input.cond_sys"], human_evals.iloc[sample_index]["Input.ex_id"]) not in seen and sc != exclude_rating:
                         seen.append((human_evals.iloc[sample_index]["Input.cond_sys"], human_evals.iloc[sample_index]["Input.ex_id"]))
                         sample_indices_f.append(sample_index)

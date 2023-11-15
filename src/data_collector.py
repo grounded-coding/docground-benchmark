@@ -262,7 +262,7 @@ class DSTCDataCollector(DataCollector):
         return model_responses
 
     def collect_sample_contexts(self, sample_indices: List[int],
-                                max_n_sent=10, max_turns=10) -> Tuple[List[int], List[List[str]], List[List[str]]]:
+                                max_n_sent=15, max_turns=15) -> Tuple[List[int], List[List[str]], List[List[str]]]:
         reference_responses = []
         turn_historys = []
         knowledge_contexts = []

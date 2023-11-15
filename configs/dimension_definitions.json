@@ -1,17 +1,22 @@
 {
     "appropriate": {
-        "description": "Rate how appropriate this response is. An appropriate response is naturally connected to the previous turns and helpful for the user's concern. Do not consider factual correctness.",
+        "description": "Rate how appropriate this response is. An appropriate response may be factually incorrect, but is naturally connected to the previous turns and helpful for the user's concern.",
         "name": "appropriate",
         "use_context": false
     },
     "accurate": {
-        "description": "Rate how accurate this response is. An accurate response is factually correct and consistent with the knowledge in the context. An inaccurate response invents facts, which cannot be cited or derived from the context. Carefully assess the score if some parts of the response are correct and other parts are wrong. Do not rate helpfulness or the style of the conversation.",
+        "description": "Rate how accurate this response is. An accurate response may be unhelpful, but is factually correct and consistent with the knowledge from the context. An inaccurate response invents facts, which cannot be derived from the context. Carefully assess the score if some parts of the response are correct and other parts are wrong.",
         "name": "accurate",
         "use_context": true
     },
     "grounded": {
-        "description":"Rate how grounded this response is. A grounded response uses the information from the context well. An ungrounded response does not mention or refer to the context at all. Do not rate helpfulness or the style of the conversation.",
+        "description": "Rate how grounded this response is. A grounded response may be unhelpful, but uses the information from the context well. An ungrounded response does not mention or refer to the context at all.",
         "name": "grounded",
         "use_context": true
+    },
+    "coherent": {
+        "description": "Rate how coherent this response is. A coherent response may be factually incorrect, but is naturally connected to the previous turns. An incoherent response appears unnatural.",
+        "name": "coherent",
+        "use_context": false
     }
 }
