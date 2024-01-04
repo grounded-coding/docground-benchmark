@@ -7,9 +7,9 @@ from summ_eval.meteor_metric import MeteorMetric
 from summ_eval.bleu_metric import BleuMetric
 from nltk.translate.bleu_score import sentence_bleu
 from lleval.scorer import PromptScorer
+from lleval.evaluator import PromptTemplate, DialogEvaluator
 from collections import Counter
 from uni_eval.evaluator import get_evaluator
-from lleval.evaluator import PromptTemplate, DialogEvaluator
 from rouge_score import rouge_scorer
 from src.openai_scorer import OpenAIScorer
 
@@ -97,14 +97,15 @@ class LLEval(EvaluationFramework):
 
 
 class GEval(EvaluationFramework):
-    def __init__(self):
-        super().__init__(['appropriate', 'accurate', 'grounded'])
+    def __init__(self, dim_definitions="configs/dimension_definitions.json", name=None):
+        super().__init__(['appropriate', 'accurate', 'grounded'], name=name)
+        self.dim_definitions = dim_definitions
 
     def evaluate(self, model_responses, reference_responses, turn_historys, knowledge_contexts, dims):
         data = convert_to_json(output_list=model_responses, src_list=turn_historys, context_list=knowledge_contexts)
         prompt_template = PromptTemplate("configs/gpt3/prompt_likert_config.json")
         gptmodel = OpenAIScorer(metric_config_file="configs/gpt3/gen_config.json", prompt_template=prompt_template, num_retries=3)
-        evaluator = DialogEvaluator(gptmodel, dimension_definitions_file="configs/dimension_definitions.json")
+        evaluator = DialogEvaluator(gptmodel, dimension_definitions_file=self.dim_definitions)
         eval_scores, eval_expls = evaluator.evaluate(data, print_result=True, dims=dims)
         merged_scores = []
         for i, score in enumerate(eval_scores):
@@ -218,9 +219,9 @@ class METEOR(SimpleEvaluationFramework):
         return score
 
 
-class ROUGE(EvaluationFramework):
+class ROUGE(SimpleEvaluationFramework):
     def __init__(self):
-        super().__init__(['rouge-l','rouge-1','rouge-2'], reference_required=True)
+        super().__init__(['rougeL','rouge-1','rouge-2'], reference_required=True)
 
     def evaluate_example(self, model_response, reference_response, turn_history, knowledge_context, dims):
         scorer = rouge_scorer.RougeScorer(dims, use_stemmer=True)

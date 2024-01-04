@@ -52,7 +52,6 @@ class DialDocEvalCollector(HumanEvalCollector):
             if human_evals.iloc[sample_index] is not None:
                 try:
                     sc = int(human_evals.iloc[sample_index]["Answer.match_ref"])
-                    # TODO 0: everything not fully grounded, 1: fully grounded
                     if (human_evals.iloc[sample_index]["Input.cond_sys"], human_evals.iloc[sample_index]["Input.ex_id"]) not in seen and sc != exclude_rating:
                         seen.append((human_evals.iloc[sample_index]["Input.cond_sys"], human_evals.iloc[sample_index]["Input.ex_id"]))
                         sample_indices_f.append(sample_index)
@@ -70,6 +69,14 @@ class DialDocEvalCollector(HumanEvalCollector):
         This means that INDICES DO NOT CORRESPOND TO THE SAMPLE INDICES ANYMORE!
         Should ONLY be used for aggregations, averages etc. where the indices are not important.
         """
+        dim_map = {"groundedness": "Answer.match_ref",
+                   "appropriateness": "Answer.score_appropriateness"}
+        # This numeric map simply leaves "contradict": 0 at 0 and everything else at 1
+        contra_map = lambda x: 1 if x != 0 else 0
+        # This leaves everything unchanged
+        identity_map = lambda x: x
+        numeric_map = identity_map
+
         ratings = []
         human_evals = self.human_eval
         
@@ -77,10 +84,13 @@ class DialDocEvalCollector(HumanEvalCollector):
             if human_evals.iloc[sample_index] is not None:
                 rating = {}
                 for dim in human_dims:
-                    mapped_dim = "Answer.match_ref" if dim == "groundedness" else "Answer.score_appropriateness"
+                    mapped_dim = dim_map[dim]
                     try:
                         selected_rows = human_evals.loc[(human_evals['Input.ex_id'] == human_evals.iloc[sample_index]['Input.ex_id']) &
                             (human_evals['Input.cond_sys'] == model)]
+                        # Aggregate the ratings
+                        if dim == "groundedness":
+                            selected_rows.loc[:, mapped_dim] = selected_rows.loc[:, mapped_dim].apply(numeric_map)
                         avg_rating = selected_rows[mapped_dim].mean()
                         rating[dim] = avg_rating
                     except:

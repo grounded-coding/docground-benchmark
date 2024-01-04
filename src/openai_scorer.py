@@ -17,7 +17,7 @@ class OpenAIScorer(PromptScorer):
         success = False
         for _ in range(self.num_retries):
             success = False
-            response_text = openai.ChatCompletion.create(model="gpt-3.5-turbo",
+            response_text = openai.ChatCompletion.create(model="gpt-4",
                                                          temperature=temperature,
                                                          messages=[{"role": "user", "content": prompt}])
             response_text = response_text["choices"][0]["message"]["content"]

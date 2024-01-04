@@ -1,12 +1,15 @@
 
+import pandas as pd
 from src.eval_collector import HumanEvalCollector
 from src.data_collector import DataCollector
 from src.eval_framework import EvaluationFramework
+import seaborn as sb
 import numpy as np
 from scipy.stats import spearmanr, kendalltau, pearsonr
 from pathlib import Path
 from utils.file_processing import load_data
 import json
+import matplotlib.pyplot as plt
 
 
 class PipelineEvaluator:
@@ -81,7 +84,7 @@ class PipelineEvaluator:
                         print("Model: {}".format(model))
                 framework_scores = self._get_framework_scores(response_indices, model, reference_responses, turn_historys, knowledge_contexts, model_responses)
                 for dim in self.desired_dimensions:
-                    print("{} - Avg. framework {}: {:>10}".format(model, dim, round(np.mean([score[dim] for score in framework_scores]), 2)))
+                    print("{} - Avg. framework {}: {:>10}".format(model, dim, round(np.mean([score[dim] for score in framework_scores]), 3)))
                 if self.correlation_level == 'sample':
                     human_scores = self.eval_collector.extract_ratings_for_sample_indices(response_indices, self.dimension_map.values(), model)
                     all_human_scores += human_scores
@@ -244,6 +247,20 @@ class PipelineEvaluator:
             framework_scores_dim = np.array([score[framework_dim] for score in framework_scores])
 
             key = framework_dim + "-" + human_dim
+
+            # Plot the scores, human vs. framework
+            df = pd.DataFrame()
+            df["human"] = human_scores_dim
+            df["framework"] = framework_scores_dim
+            print(df.head())
+
+            sb.regplot(data=df, x="human", y="framework", x_jitter = 0.15, y_jitter = 0.15, fit_reg=False, color="b", scatter_kws = {'alpha' : 1/3, 's':4})
+            plt.xlabel(f"Human {human_dim}")
+            plt.ylabel(f"Framework {framework_dim}")
+            # save fig with unique name and create dir if not exists
+            direct = f"outputs/{self.data_collector.get_name()}/{self.data_collector.dataset_split}/{self.desired_framework.get_name()}"
+            Path(direct).mkdir(parents=True, exist_ok=True)
+            plt.savefig(f"{direct}/{key}.png", dpi=300)
 
             if self.correlation_score == 'spearman':
                 spearman_corr, p = spearmanr(human_scores_dim, framework_scores_dim)

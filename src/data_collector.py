@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+import random
 from typing import List, Tuple, Dict
 import json
 from itertools import groupby
@@ -240,13 +241,18 @@ class DSTCDataCollector(DataCollector):
         j = 0
         with open(f'{self.dataset}/{self.dataset_split}/labels.json') as f:
             labels = json.load(f)
-            for i in range(len(labels)):
-                if labels[i]["target"]:
+            if n > 0:
+                # we sample a random set of indices that have a target but with reproducible seed
+                random.seed(42)
+                sample_indices = sorted(random.sample([i for i in range(len(labels)) if labels[i]["target"]], n))
+                for i in sample_indices:
                     candidate_responses.append(labels[i]["response"])
-                    sample_indices.append(i)
-                    j += 1
-                if n > 0 and j >= n:
-                    break
+            else:
+                for i in range(len(labels)):
+                    if labels[i]["target"]:
+                        candidate_responses.append(labels[i]["response"])
+                        sample_indices.append(i)
+                        j += 1
         return sample_indices
 
     def get_pred_responses(self, sample_indices, model_candidates):
