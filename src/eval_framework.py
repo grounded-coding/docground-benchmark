@@ -189,6 +189,20 @@ class BLEU(SimpleEvaluationFramework):
         return score
 
 
+class SeqLen(SimpleEvaluationFramework):
+    def __init__(self):
+        super().__init__(['seq-len'], reference_required=False)
+
+    def evaluate_example(self, model_response, reference_response, turn_history, knowledge_context, dims):
+        score = {}
+        for dim in dims:
+            if dim == "seq-len":
+                score[dim] = len(model_response)
+            else:
+                raise NotImplementedError("Unknown dimension")
+        return score
+    
+
 class KnowledgeBLEU(SimpleEvaluationFramework):
     def __init__(self):
         super().__init__(['knowledge-bleu-4', 'knowledge-bleu-1'], reference_required=False)
