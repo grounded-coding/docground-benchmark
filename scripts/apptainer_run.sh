@@ -1,1 +1,0 @@
-pip install -r requirements.txt && python begin_pipeline.py

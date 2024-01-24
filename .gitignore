@@ -162,4 +162,6 @@ cython_debug/
 outputs/
 pipelines/
 configs/
-merged.csv
+
+*.csv
+*.png

@@ -4,6 +4,8 @@ from utils.file_processing import load_data
 import pandas as pd
 from abc import ABC, abstractmethod
 from pathlib import Path
+import krippendorff
+import matplotlib.pyplot as plt
 
 
 class HumanEvalCollector(ABC):
@@ -169,7 +171,7 @@ class DSTCHumanEvalCollector(HumanEvalCollector):
             data_human_map[model] = load_data(human_eval_path)
         self.data_human_map = data_human_map
 
-    def extract_ratings_for_sample_indices(self, sample_indices, human_dims=["accuracy", "appropriateness"], model=""):
+    def extract_ratings_for_sample_indices(self, sample_indices, human_dims=["accuracy", "appropriateness"], model="", print_alpha=True):
         """
         Extracts human ratings from the DSTC human evaluation file
         :param sample_indices: The indices of the samples for which the ratings should be extracted, should never be NONE
@@ -178,18 +180,41 @@ class DSTCHumanEvalCollector(HumanEvalCollector):
         :return: A list of dicts containing the ratings for each sample
         """
         ratings = []
+        dimension_ratings = {dim: [] for dim in human_dims}
         human_evals = self.data_human_map[model]
+        dimension_sample_ratings = {dim: [] for dim in human_dims}  # To store average ratings for each sample and dimension
 
         for sample_index in sample_indices:
             rating = {}
             if human_evals[sample_index] is not None:
                 for dim in human_dims:
                     # the human file contains a list of 3 ratings, we take the average
-                    rating[dim] = human_evals[sample_index][dim]
-                    rating[dim] = np.mean(rating[dim])
+                    rating[dim] = np.mean(human_evals[sample_index][dim])
+                    dimension_ratings[dim].append(human_evals[sample_index][dim])
+                    avg_rating = np.mean(human_evals[sample_index][dim])
+                    dimension_sample_ratings[dim].append(avg_rating)
                 ratings.append(rating)
             else:
                 raise ValueError("No human ratings for sample {}".format(sample_index))
+            
+        if print_alpha:
+            for dim in human_dims:
+                alpha = krippendorff.alpha(value_counts=np.array(dimension_ratings[dim]), level_of_measurement="ordinal")
+                print(f"Krippendorff's Alpha for '{dim}': {alpha}")
+        
+        # Plotting
+        # fig, axes = plt.subplots(1, len(human_dims), figsize=(len(human_dims)*5, 5))
+        # if len(human_dims) == 1:  # If there's only one dimension, axes won't be an array
+        #     axes = [axes]
+        # for ax, dim in zip(axes, human_dims):
+        #     ax.scatter(sample_indices, dimension_sample_ratings[dim])
+        #     ax.set_title(f'Average Ratings for {dim}')
+        #     ax.set_xlabel('Sample Index')
+        #     ax.set_ylabel('Average Rating')
+        #     ax.grid(True)
+        # plt.tight_layout()
+        # plt.savefig(f'{model}_ratings.png')
+
         return ratings
 
     def get_subset_with_human_eval(self, sample_indices, candidate_responses=None, exclude_rating=None, model="baseline"):

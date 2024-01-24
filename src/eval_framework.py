@@ -12,7 +12,9 @@ from collections import Counter
 from uni_eval.evaluator import get_evaluator
 from rouge_score import rouge_scorer
 from src.openai_scorer import OpenAIScorer
+from dotenv import load_dotenv
 
+load_dotenv()
 
 class EvaluationFramework(ABC):
     def __init__(self, available_dimensions, reference_required=False, name=None):
@@ -97,14 +99,15 @@ class LLEval(EvaluationFramework):
 
 
 class GEval(EvaluationFramework):
-    def __init__(self, dim_definitions="configs/dimension_definitions.json", name=None):
-        super().__init__(['appropriate', 'accurate', 'grounded'], name=name)
+    def __init__(self, dim_definitions="configs/dimension_definitions.json", name=None, gpt_model="gpt-4-1106-preview"):
+        super().__init__(['appropriate', 'accurate', 'grounded', 'coherent'], name=name)
+        self.gpt_model = gpt_model
         self.dim_definitions = dim_definitions
 
     def evaluate(self, model_responses, reference_responses, turn_historys, knowledge_contexts, dims):
         data = convert_to_json(output_list=model_responses, src_list=turn_historys, context_list=knowledge_contexts)
         prompt_template = PromptTemplate("configs/gpt3/prompt_likert_config.json")
-        gptmodel = OpenAIScorer(metric_config_file="configs/gpt3/gen_config.json", prompt_template=prompt_template, num_retries=3)
+        gptmodel = OpenAIScorer(metric_config_file="configs/gpt3/gen_config.json", prompt_template=prompt_template, gpt_model=self.gpt_model, num_retries=3)
         evaluator = DialogEvaluator(gptmodel, dimension_definitions_file=self.dim_definitions)
         eval_scores, eval_expls = evaluator.evaluate(data, print_result=True, dims=dims)
         merged_scores = []

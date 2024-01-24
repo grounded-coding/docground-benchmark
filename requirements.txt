@@ -2,4 +2,5 @@ git+https://github.com/nils-hde/LLEval.git
 git+https://github.com/nils-hde/UniEval.git
 openai
 pandas
-summeval
+summ_eval
+python_dotenv

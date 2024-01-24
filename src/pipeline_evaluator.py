@@ -3,13 +3,13 @@ import pandas as pd
 from src.eval_collector import HumanEvalCollector
 from src.data_collector import DataCollector
 from src.eval_framework import EvaluationFramework
-import seaborn as sb
 import numpy as np
 from scipy.stats import spearmanr, kendalltau, pearsonr
 from pathlib import Path
 from utils.file_processing import load_data
 import json
 import matplotlib.pyplot as plt
+import seaborn as sb
 
 
 class PipelineEvaluator:
@@ -253,7 +253,6 @@ class PipelineEvaluator:
             df["human"] = human_scores_dim
             df["framework"] = framework_scores_dim
             print(df.head())
-
             sb.regplot(data=df, x="human", y="framework", x_jitter = 0.15, y_jitter = 0.15, fit_reg=False, color="b", scatter_kws = {'alpha' : 1/3, 's':4})
             plt.xlabel(f"Human {human_dim}")
             plt.ylabel(f"Framework {framework_dim}")
