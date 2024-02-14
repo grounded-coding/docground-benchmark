@@ -50,6 +50,7 @@ def write_prediction_to_csv(json_file_path, csv_file_path):
 # Usage example
 json_file_paths = ['outputs/dstc11/val/llama-7b-ft/geval4_turbo.json',
                     'outputs/dstc11/val/bart-baseline-ft/geval4_turbo.json',
+                    'outputs/dstc11/val/llama-7b-ft-filtered/geval4_turbo.json',
                     'outputs/dstc11/val/humanref/geval4_turbo.json',
                     'outputs/dstc11/train/humanref/geval4_turbo.json'
                     ]
@@ -61,6 +62,7 @@ for json_file_path in json_file_paths:
 
 # Usage example
 pred_json_file_paths = ['../dstc11-track5/pred/val/rg.llama-7b-peft-opt-0104103455.json',
+                        '../dstc11-track5/pred/val/rg.llama-7b-peft-opt-0131151009.json',
                         '../dstc11-track5/pred/val/rg.special_tok/bart-base-baseline-0108110257.json',
                         '../dstc11-track5/data/val/labels.json',
                         '../dstc11-track5/data/train/labels.json'] 
