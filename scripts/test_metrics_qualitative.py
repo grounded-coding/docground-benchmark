@@ -2,7 +2,7 @@ from src.eval_framework import DummyEval, LLEval, KnowledgeF1, BLEU, UniEval, Kn
 
 kbleu = KnowledgeBLEU()
 lleval = LLEval()
-geval = GEval()
+geval_turbo4 = GEval(gpt_model="gpt-4-1106-preview")
 unieval = UniEval()
 kf1 = KnowledgeF1()
 bleu = BLEU()
@@ -55,7 +55,7 @@ def build_example_3():
     return gold_responses, candidate_responses, context_lists, turn_historys
 
 
-for example in [build_example_1, build_example_2, build_example_3]:
+for example in [build_example_3]:
     gold_responses, candidate_responses, context_lists, turn_historys = example()
 
     for candidate_response in candidate_responses:
@@ -65,6 +65,6 @@ for example in [build_example_1, build_example_2, build_example_3]:
         print("Knowledge F1: ", kf1.evaluate([candidate_response], gold_responses, turn_historys, context_lists, dims=["knowledge-f1"]))
         print("METEOR: ", meteval.evaluate([candidate_response], gold_responses, turn_historys, context_lists, dims=["meteor"]))
         # print("LL: ", lleval.evaluate([candidate_response], gold_responses, turn_historys, context_lists, dims=["accurate"]))
-        # print("GEval: ", geval.evaluate([candidate_response], gold_responses, turn_historys, context_lists))
+        print("GEval: ", geval_turbo4.evaluate([candidate_response], gold_responses, turn_historys, context_lists, dims=["accurate", "appropriate"]))
         # print("UniEval: ", unieval.evaluate([candidate_response], gold_responses, turn_historys, context_lists, dims=["groundedness"]))
         print("\n")
