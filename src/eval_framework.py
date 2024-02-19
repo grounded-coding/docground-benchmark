@@ -87,7 +87,7 @@ class LLEval(EvaluationFramework):
     def evaluate(self, model_responses, reference_responses, turn_historys, knowledge_contexts, dims):
         data = convert_to_json(output_list=model_responses, src_list=turn_historys, context_list=knowledge_contexts)
         prompt_template = PromptTemplate("configs/llama2/prompt_likert_config.json")
-        llama2local = PromptScorer(api_url="http://gpu-19.apptek.local:8080/generate", metric_config_file=self.gen_config, prompt_template=prompt_template, num_retries=3)
+        llama2local = PromptScorer(api_url="http://gpu-21.apptek.local:8080/generate", metric_config_file=self.gen_config, prompt_template=prompt_template, num_retries=3)
         evaluator = DialogEvaluator(llama2local, dimension_definitions_file=self.dim_definitions)
         eval_scores, eval_expls = evaluator.evaluate(data, print_result=True, dims=dims)
         merged_scores = []

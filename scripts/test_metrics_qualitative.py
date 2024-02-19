@@ -52,6 +52,7 @@ def build_example_3():
     gold_responses.append("No, guests consistently complain about the water pressure, unfortunately. Will that be okay or should I do another search?")
     candidate_responses.append("The Cityroomz hotel has very low water pressure according to most guests. Only one person had a good experience with it.")
     candidate_responses.append("The Cityroomz has very low water pressure according to every guest review I found.")
+    candidate_responses.append("The Cityroomz hotel has low water pressure in their showers according to most guests. Do you want to look elsewhere?")
     return gold_responses, candidate_responses, context_lists, turn_historys
 
 
