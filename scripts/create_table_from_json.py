@@ -61,11 +61,11 @@ for json_file_path in json_file_paths:
     write_evaluations_to_csv(json_file_path, csv_file_path)
 
 # Usage example
-pred_json_file_paths = ['../dstc11-track5/pred/val/rg.llama-7b-peft-opt-0104103455.json',
-                        '../dstc11-track5/pred/val/rg.llama-7b-peft-opt-0131151009.json',
-                        '../dstc11-track5/pred/val/rg.special_tok/bart-base-baseline-0108110257.json',
-                        '../dstc11-track5/data/val/labels.json',
-                        '../dstc11-track5/data/train/labels.json'] 
+pred_json_file_paths = ['datasets/dstc11-track5/pred/val/rg.llama-7b-peft-opt-0104103455.json',
+                        'datasets/dstc11-track5/pred/val/rg.llama-7b-peft-opt-0131151009.json',
+                        'datasets/dstc11-track5/pred/val/rg.special_tok/bart-base-baseline-0108110257.json',
+                        'datasets/dstc11-track5/data/val/labels.json',
+                        'datasets/dstc11-track5/data/train/labels.json'] 
 
 for pred_json_file_path in pred_json_file_paths:
     pred_csv_file_path = pred_json_file_path.replace('.json', '.csv')

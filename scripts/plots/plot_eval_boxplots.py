@@ -26,8 +26,8 @@ if begin_set:
     index_sets = begin_eval_collector.get_index_sets_disjunctive(sample_indices, human_ratings, human_dim)
 
 else:
-    dstc = DSTCDataCollector(dataset_path="../dstc11-track5/data/dstc9", dataset_split="test", dataset_name="dstc9")
-    dstc_eval_coll = DSTCHumanEvalCollector(human_eval_path="../dstc11-track5/results/results_dstc9/baseline/entry0.human_eval.json")
+    dstc = DSTCDataCollector(dataset_path="datasets/dstc11-track5/data/dstc9", dataset_split="test", dataset_name="dstc9")
+    dstc_eval_coll = DSTCHumanEvalCollector(human_eval_path="datasets/dstc11-track5/results/results_dstc9/baseline/entry0.human_eval.json")
     sample_indices = dstc.get_samples_with_target()
     sample_indices, _ = dstc_eval_coll.get_subset_with_human_eval(sample_indices, None)
     human_ratings = dstc_eval_coll.extract_ratings_for_sample_indices(sample_indices)
