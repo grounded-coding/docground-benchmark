@@ -1,0 +1,21 @@
+{
+    "framework": "GPT4Eval",
+    "models": [
+        "Original Ground Truth",
+        "Argmax Decoding",
+        "Nucleus Decoding (p = 0.5)",
+        "Nucleus Decoding (p = 0.7)",
+        "Nucleus Decoding (p = 0.3)",
+        "New Human Generated"
+    ],
+    "corr_level": "sample",
+    "corr_score": "spearman",
+    "correlations": [
+        {
+            "grounded-groundedness": 0.7607462913503591,
+            "grounded-groundedness-p": 3.7997771666221903e-60,
+            "coherent-coherence": 0.5572436398689798,
+            "coherent-coherence-p": 7.5446467524195e-27
+        }
+    ]
+}

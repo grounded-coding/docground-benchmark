@@ -1,0 +1,21 @@
+{
+    "framework": "KnowledgeBLEU",
+    "models": [
+        "baseline",
+        "entry060",
+        "entry023",
+        "entry074",
+        "entry080",
+        "entry133",
+        "entry140",
+        "entry122"
+    ],
+    "corr_level": "system",
+    "corr_score": "spearman",
+    "correlations": [
+        {
+            "knowledge-bleu-4-accuracy": -0.3571428571428572,
+            "knowledge-bleu-4-accuracy-p": 0.38512064355625636
+        }
+    ]
+}

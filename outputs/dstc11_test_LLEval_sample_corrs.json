@@ -1,0 +1,16 @@
+{
+    "framework": "LLEval",
+    "models": [
+        "baseline"
+    ],
+    "corr_level": "sample",
+    "corr_score": "spearman",
+    "correlations": [
+        {
+            "accurate-accuracy": 0.09496346655459319,
+            "accurate-accuracy-p": 0.1096564094853429,
+            "appropriate-appropriateness": 0.017961966897987656,
+            "appropriate-appropriateness-p": 0.7627095408556823
+        }
+    ]
+}

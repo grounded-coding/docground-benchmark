@@ -1,0 +1,21 @@
+{
+    "framework": "LLEval",
+    "models": [
+        "Original Ground Truth",
+        "Argmax Decoding",
+        "Nucleus Decoding (p = 0.5)",
+        "Nucleus Decoding (p = 0.7)",
+        "Nucleus Decoding (p = 0.3)",
+        "New Human Generated"
+    ],
+    "corr_level": "sample",
+    "corr_score": "spearman",
+    "correlations": [
+        {
+            "grounded-groundedness": 0.5253163431983555,
+            "grounded-groundedness-p": 1.5680524772318274e-23,
+            "coherent-coherence": 0.3657341883038047,
+            "coherent-coherence-p": 2.6179546702307017e-11
+        }
+    ]
+}

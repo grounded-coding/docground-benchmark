@@ -1,0 +1,21 @@
+{
+    "framework": "KnowledgeF1",
+    "models": [
+        "Original Ground Truth",
+        "Argmax Decoding",
+        "Nucleus Decoding (p = 0.5)",
+        "Nucleus Decoding (p = 0.7)",
+        "Nucleus Decoding (p = 0.3)",
+        "New Human Generated"
+    ],
+    "corr_level": "sample",
+    "corr_score": "spearman",
+    "correlations": [
+        {
+            "knowledge-f1-groundedness": 0.7167834504579861,
+            "knowledge-f1-groundedness-p": 1.813451835189915e-50,
+            "knowledge-f1A-coherence": 0.2353425201327626,
+            "knowledge-f1A-coherence-p": 2.6759490852231974e-05
+        }
+    ]
+}

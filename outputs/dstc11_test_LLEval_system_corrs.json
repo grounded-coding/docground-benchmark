@@ -1,0 +1,23 @@
+{
+    "framework": "LLEval",
+    "models": [
+        "baseline",
+        "entry060",
+        "entry023",
+        "entry074",
+        "entry080",
+        "entry133",
+        "entry140",
+        "entry122"
+    ],
+    "corr_level": "system",
+    "corr_score": "spearman",
+    "correlations": [
+        {
+            "accurate-accuracy": 0.3113828280974473,
+            "accurate-accuracy-p": 0.45279875742633724,
+            "appropriate-appropriateness": 0.261904761904762,
+            "appropriate-appropriateness-p": 0.530922861565801
+        }
+    ]
+}

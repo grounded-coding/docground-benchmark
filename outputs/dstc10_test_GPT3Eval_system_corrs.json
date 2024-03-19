@@ -1,0 +1,25 @@
+{
+    "framework": "GPT3Eval",
+    "models": [
+        "baseline",
+        "knover-baseline",
+        "teamB02-3",
+        "teamB04-1",
+        "teamB07-3",
+        "teamB08-3",
+        "teamB10-1",
+        "teamB12-1",
+        "teamB14-0",
+        "teamB16-3"
+    ],
+    "corr_level": "system",
+    "corr_score": "spearman",
+    "correlations": [
+        {
+            "accurate-accuracy": 0.8666666666666665,
+            "accurate-accuracy-p": 0.0011735381801554687,
+            "appropriate-appropriateness": 0.3939393939393939,
+            "appropriate-appropriateness-p": 0.25999776683488757
+        }
+    ]
+}

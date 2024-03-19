@@ -1,0 +1,21 @@
+{
+    "framework": "BLEU",
+    "models": [
+        "Original Ground Truth",
+        "Argmax Decoding",
+        "Nucleus Decoding (p = 0.5)",
+        "Nucleus Decoding (p = 0.7)",
+        "Nucleus Decoding (p = 0.3)",
+        "New Human Generated"
+    ],
+    "corr_level": "sample",
+    "corr_score": "spearman",
+    "correlations": [
+        {
+            "bleu-4-groundedness": 0.432138728129014,
+            "bleu-4-groundedness-p": 1.2579357606024107e-15,
+            "bleu-4A-coherence": 0.3836011026200745,
+            "bleu-4A-coherence-p": 2.2365580951794624e-12
+        }
+    ]
+}

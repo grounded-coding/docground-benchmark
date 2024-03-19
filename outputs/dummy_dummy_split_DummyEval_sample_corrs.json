@@ -1,0 +1,16 @@
+{
+    "framework": "DummyEval",
+    "models": [
+        "model1"
+    ],
+    "corr_level": "sample",
+    "corr_score": "spearman",
+    "correlations": [
+        {
+            "accur-dimension1": 0.9999999999999999,
+            "accur-dimension1-p": NaN,
+            "app-dimension2": 0.9999999999999999,
+            "app-dimension2-p": NaN
+        }
+    ]
+}

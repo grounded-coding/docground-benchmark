@@ -1,0 +1,16 @@
+{
+    "framework": "GPT3Eval",
+    "models": [
+        "baseline"
+    ],
+    "corr_level": "sample",
+    "corr_score": "spearman",
+    "correlations": [
+        {
+            "accurate-accuracy": 0.36382387901279484,
+            "accurate-accuracy-p": 1.1862241438612254e-07,
+            "appropriate-appropriateness": 0.34380302103210847,
+            "appropriate-appropriateness-p": 6.214994754640998e-07
+        }
+    ]
+}

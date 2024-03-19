@@ -1,0 +1,16 @@
+{
+    "framework": "KnowledgeF1",
+    "models": [
+        "baseline"
+    ],
+    "corr_level": "sample",
+    "corr_score": "spearman",
+    "correlations": [
+        {
+            "knowledge-f1-accuracy": 0.4287568610374028,
+            "knowledge-f1-accuracy-p": 5.258129474802254e-13,
+            "knowledge-f1A-appropriateness": 0.1716802217234491,
+            "knowledge-f1A-appropriateness-p": 0.005602801216127522
+        }
+    ]
+}

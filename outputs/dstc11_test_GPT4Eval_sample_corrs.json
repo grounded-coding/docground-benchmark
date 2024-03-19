@@ -1,0 +1,16 @@
+{
+    "framework": "GPT4Eval",
+    "models": [
+        "baseline"
+    ],
+    "corr_level": "sample",
+    "corr_score": "spearman",
+    "correlations": [
+        {
+            "accurate-accuracy": 0.22215848241281624,
+            "accurate-accuracy-p": 0.00015598363094052417,
+            "appropriate-appropriateness": 0.009417851056646689,
+            "appropriate-appropriateness-p": 0.8742232507851327
+        }
+    ]
+}

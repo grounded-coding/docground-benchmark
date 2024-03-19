@@ -1,0 +1,27 @@
+{
+    "framework": "BLEU",
+    "models": [
+        "baseline",
+        "entry031",
+        "entry100",
+        "entry103",
+        "entry107",
+        "entry109",
+        "entry110",
+        "entry111",
+        "entry113",
+        "entry115",
+        "entry118",
+        "entry123"
+    ],
+    "corr_level": "system",
+    "corr_score": "spearman",
+    "correlations": [
+        {
+            "bleu-4-accuracy": 0.2657342657342658,
+            "bleu-4-accuracy-p": 0.40383308831471165,
+            "bleu-4A-appropriateness": 0.6783216783216784,
+            "bleu-4A-appropriateness-p": 0.0153173290532817
+        }
+    ]
+}

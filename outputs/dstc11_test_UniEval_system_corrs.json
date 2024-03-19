@@ -1,0 +1,23 @@
+{
+    "framework": "UniEval",
+    "models": [
+        "baseline",
+        "entry060",
+        "entry023",
+        "entry074",
+        "entry080",
+        "entry133",
+        "entry140",
+        "entry122"
+    ],
+    "corr_level": "system",
+    "corr_score": "spearman",
+    "correlations": [
+        {
+            "groundedness-accuracy": 0.30952380952380953,
+            "groundedness-accuracy-p": 0.4556448907375822,
+            "coherence-appropriateness": 0.28571428571428575,
+            "coherence-appropriateness-p": 0.4927262450169573
+        }
+    ]
+}

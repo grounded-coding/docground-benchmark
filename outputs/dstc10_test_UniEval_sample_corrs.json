@@ -1,0 +1,16 @@
+{
+    "framework": "UniEval",
+    "models": [
+        "baseline"
+    ],
+    "corr_level": "sample",
+    "corr_score": "spearman",
+    "correlations": [
+        {
+            "groundedness-accuracy": 0.4350750184000925,
+            "groundedness-accuracy-p": 1.2114775242058304e-10,
+            "coherence-appropriateness": 0.32356958323073326,
+            "coherence-appropriateness-p": 2.9592929457157296e-06
+        }
+    ]
+}

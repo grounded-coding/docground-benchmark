@@ -1,0 +1,25 @@
+{
+    "framework": "BLEU",
+    "models": [
+        "baseline",
+        "knover-baseline",
+        "teamB02-3",
+        "teamB04-1",
+        "teamB07-3",
+        "teamB08-3",
+        "teamB10-1",
+        "teamB12-1",
+        "teamB14-0",
+        "teamB16-3"
+    ],
+    "corr_level": "system",
+    "corr_score": "spearman",
+    "correlations": [
+        {
+            "bleu-4-accuracy": 0.4666666666666666,
+            "bleu-4-accuracy-p": 0.17393859716506632,
+            "bleu-4A-appropriateness": 0.07878787878787878,
+            "bleu-4A-appropriateness-p": 0.8287173946974606
+        }
+    ]
+}

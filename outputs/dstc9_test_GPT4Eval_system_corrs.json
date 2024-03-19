@@ -1,0 +1,27 @@
+{
+    "framework": "GPT4Eval",
+    "models": [
+        "baseline",
+        "entry031",
+        "entry100",
+        "entry103",
+        "entry107",
+        "entry109",
+        "entry110",
+        "entry111",
+        "entry113",
+        "entry115",
+        "entry118",
+        "entry123"
+    ],
+    "corr_level": "system",
+    "corr_score": "spearman",
+    "correlations": [
+        {
+            "accurate-accuracy": 0.6503496503496504,
+            "accurate-accuracy-p": 0.022034190932365288,
+            "appropriate-appropriateness": 0.5237331142892234,
+            "appropriate-appropriateness-p": 0.0805250264584258
+        }
+    ]
+}

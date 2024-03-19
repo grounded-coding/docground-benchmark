@@ -1,0 +1,23 @@
+{
+    "framework": "KnowledgeF1",
+    "models": [
+        "baseline",
+        "entry060",
+        "entry023",
+        "entry074",
+        "entry080",
+        "entry133",
+        "entry140",
+        "entry122"
+    ],
+    "corr_level": "system",
+    "corr_score": "spearman",
+    "correlations": [
+        {
+            "knowledge-f1-accuracy": -0.2380952380952381,
+            "knowledge-f1-accuracy-p": 0.5701563208157683,
+            "knowledge-f1A-appropriateness": -0.4285714285714286,
+            "knowledge-f1A-appropriateness-p": 0.2894032248467901
+        }
+    ]
+}

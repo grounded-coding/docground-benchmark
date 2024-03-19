@@ -1,0 +1,25 @@
+{
+    "framework": "UniEval",
+    "models": [
+        "baseline",
+        "knover-baseline",
+        "teamB02-3",
+        "teamB04-1",
+        "teamB07-3",
+        "teamB08-3",
+        "teamB10-1",
+        "teamB12-1",
+        "teamB14-0",
+        "teamB16-3"
+    ],
+    "corr_level": "system",
+    "corr_score": "spearman",
+    "correlations": [
+        {
+            "groundedness-accuracy": 0.7333333333333332,
+            "groundedness-accuracy-p": 0.01580059625057158,
+            "coherence-appropriateness": 0.13939393939393938,
+            "coherence-appropriateness-p": 0.7009318849100584
+        }
+    ]
+}

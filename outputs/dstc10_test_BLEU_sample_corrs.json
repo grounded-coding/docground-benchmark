@@ -1,0 +1,16 @@
+{
+    "framework": "BLEU",
+    "models": [
+        "baseline"
+    ],
+    "corr_level": "sample",
+    "corr_score": "spearman",
+    "correlations": [
+        {
+            "bleu-4-accuracy": 0.33150985616715806,
+            "bleu-4-accuracy-p": 1.625409663556882e-06,
+            "bleu-4A-appropriateness": 0.23784976903641775,
+            "bleu-4A-appropriateness-p": 0.0006953095284899551
+        }
+    ]
+}

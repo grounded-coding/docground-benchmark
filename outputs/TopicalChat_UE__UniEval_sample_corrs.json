@@ -1,0 +1,21 @@
+{
+    "framework": "UniEval",
+    "models": [
+        "Original Ground Truth",
+        "Argmax Decoding",
+        "Nucleus Decoding (p = 0.5)",
+        "Nucleus Decoding (p = 0.7)",
+        "Nucleus Decoding (p = 0.3)",
+        "New Human Generated"
+    ],
+    "corr_level": "sample",
+    "corr_score": "spearman",
+    "correlations": [
+        {
+            "groundedness-groundedness": 0.6555635338389905,
+            "groundedness-groundedness-p": 1.0616655444731788e-39,
+            "coherence-coherence": 0.602035657236559,
+            "coherence-coherence-p": 3.748903254529064e-32
+        }
+    ]
+}
