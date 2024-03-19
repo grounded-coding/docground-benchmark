@@ -1,8 +1,8 @@
-from src.eval_framework import DummyEval, LLEval, KnowledgeF1, BLEU, UniEval, KnowledgeBLEU, GEval, METEOR
+from src.eval_framework import DummyEval, LLEval, KnowledgeF1, BLEU, UniEval, KnowledgeBLEU, GPTEval, METEOR
 
 kbleu = KnowledgeBLEU()
 lleval = LLEval()
-geval_turbo4 = GEval(gpt_model="gpt-4-1106-preview")
+geval_turbo4 = GPTEval(gpt_model="gpt-4-1106-preview")
 unieval = UniEval()
 kf1 = KnowledgeF1()
 bleu = BLEU()
@@ -66,6 +66,6 @@ for example in [build_example_3]:
         print("Knowledge F1: ", kf1.evaluate([candidate_response], gold_responses, turn_historys, context_lists, dims=["knowledge-f1"]))
         print("METEOR: ", meteval.evaluate([candidate_response], gold_responses, turn_historys, context_lists, dims=["meteor"]))
         # print("LL: ", lleval.evaluate([candidate_response], gold_responses, turn_historys, context_lists, dims=["accurate"]))
-        print("GEval: ", geval_turbo4.evaluate([candidate_response], gold_responses, turn_historys, context_lists, dims=["accurate", "appropriate"]))
+        print("GPTEval: ", geval_turbo4.evaluate([candidate_response], gold_responses, turn_historys, context_lists, dims=["accurate", "appropriate"]))
         # print("UniEval: ", unieval.evaluate([candidate_response], gold_responses, turn_historys, context_lists, dims=["groundedness"]))
         print("\n")

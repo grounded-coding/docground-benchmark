@@ -1,6 +1,9 @@
 import json
 import csv
 
+# This script helps you to convert the JSON output of the evaluation script to a CSV file for easy import to 
+# a sheet or a database. The script reads the JSON file and writes the data to a CSV file.
+
 def write_evaluations_to_csv(json_file_path, csv_file_path):
     # Read the JSON data
     with open(json_file_path, 'r') as json_file:
@@ -48,11 +51,11 @@ def write_prediction_to_csv(json_file_path, csv_file_path):
 
 
 # Usage example
-json_file_paths = ['outputs/dstc11/val/llama-7b-ft/geval4_turbo.json',
-                    'outputs/dstc11/val/bart-baseline-ft/geval4_turbo.json',
-                    'outputs/dstc11/val/llama-7b-ft-filtered/geval4_turbo.json',
-                    'outputs/dstc11/val/humanref/geval4_turbo.json',
-                    'outputs/dstc11/train/humanref/geval4_turbo.json'
+json_file_paths = ['outputs/dstc11/val/llama-7b-ft/GPT4Eval.json',
+                    'outputs/dstc11/val/bart-baseline-ft/GPT4Eval.json',
+                    'outputs/dstc11/val/llama-7b-ft-filtered/GPT4Eval.json',
+                    'outputs/dstc11/val/humanref/GPT4Eval.json',
+                    'outputs/dstc11/train/humanref/GPT4Eval.json'
                     ]
 
 for json_file_path in json_file_paths:

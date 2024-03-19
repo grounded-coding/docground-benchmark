@@ -28,7 +28,7 @@ class EvaluationFramework(ABC):
         self.name = name
 
     @abstractmethod
-    def evaluate(self, model_responses, reference_responses, turn_historys, knowledge_contexts, dims):
+    def evaluate(self, model_responses, reference_responses, turn_historys, knowledge_contexts, dims) -> list[dict]:
         """
         :param model_responses: list of model responses which are strings
         :param reference_responses: list of reference responses which are strings
@@ -79,15 +79,18 @@ class DummyEval(EvaluationFramework):
 
 
 class LLEval(EvaluationFramework):
-    def __init__(self, gen_config="configs/llama2/gen_config.json", dim_definitions="configs/dimension_definitions.json", name=None):
+    def __init__(self, gen_config="configs/llama2/gen_config.json", dim_definitions="configs/dimension_definitions.json",
+                 api_url="http://gpu-21.apptek.local:8080/generate", likert_config="configs/llama2/prompt_likert_config.json", name=None):
         super().__init__(['appropriate', 'accurate', "grounded", "coherent"], name=name)
         self.dim_definitions = dim_definitions
         self.gen_config = gen_config
+        self.api_url = api_url
+        self.likert_config = likert_config
 
     def evaluate(self, model_responses, reference_responses, turn_historys, knowledge_contexts, dims):
         data = convert_to_json(output_list=model_responses, src_list=turn_historys, context_list=knowledge_contexts)
-        prompt_template = PromptTemplate("configs/llama2/prompt_likert_config.json")
-        llama2local = PromptScorer(api_url="http://gpu-21.apptek.local:8080/generate", metric_config_file=self.gen_config, prompt_template=prompt_template, num_retries=3)
+        prompt_template = PromptTemplate(self.likert_config)
+        llama2local = PromptScorer(api_url=self.api_url, metric_config_file=self.gen_config, prompt_template=prompt_template, num_retries=3)
         evaluator = DialogEvaluator(llama2local, dimension_definitions_file=self.dim_definitions)
         eval_scores, eval_expls = evaluator.evaluate(data, print_result=True, dims=dims)
         merged_scores = []
@@ -98,8 +101,8 @@ class LLEval(EvaluationFramework):
         return merged_scores
 
 
-class GEval(EvaluationFramework):
-    def __init__(self, dim_definitions="configs/dimension_definitions.json", name=None, gpt_model="gpt-4-1106-preview"):
+class GPTEval(EvaluationFramework):
+    def __init__(self, dim_definitions="configs/dimension_definitions.json", name="GPT4Eval", gpt_model="gpt-4-1106-preview"):
         super().__init__(['appropriate', 'accurate', 'grounded', 'coherent'], name=name)
         self.gpt_model = gpt_model
         self.dim_definitions = dim_definitions

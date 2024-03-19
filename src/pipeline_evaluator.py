@@ -53,17 +53,9 @@ class PipelineEvaluator:
 
         return new_response_indices, model_responses, reference_responses, turn_historys, knowledge_contexts
 
-    def run_pipeline(self, model_responses, response_indices, print_statements=True, exclude_rating=None, verbose=False):
+    def run_pipeline(self, model_responses, response_indices, print_statements=True, exclude_rating=None, verbose=False) -> list:
         reference_responses = None
         all_human_framework_correlations = []
-
-        print("\n-----------------------------")
-        print("{} corr. -- {} level".format(self.correlation_score, self.correlation_level))
-        print("Dataset: {}".format(self.data_collector.get_name()))
-        print("Split: {}".format(self.data_collector.dataset_split))
-        print("Framework: {:<20}".format(self.desired_framework.get_name()))
-        print("Models: {}".format(self.model_candidates))
-        print("-----------------------------\n")
 
         if self.correlation_level in [None, "sample"]:
             all_framework_scores = []
@@ -125,6 +117,16 @@ class PipelineEvaluator:
 
         else:
             raise ValueError("Correlation level {} not supported.".format(self.correlation_level))
+        
+        # dump the results
+        with open(f"outputs/{self.data_collector.dataset_name}_{self.data_collector.dataset_split}_{self.desired_framework.get_name()}_{self.correlation_level}_corrs.json", "w") as f:
+            res_dict = {}
+            res_dict["framework"] = self.desired_framework.get_name()
+            res_dict["models"] = self.model_candidates
+            res_dict["corr_level"] = self.correlation_level
+            res_dict["corr_score"] = self.correlation_score
+            res_dict["correlations"] = all_human_framework_correlations
+            json.dump(res_dict, f, indent=4)
         return all_human_framework_correlations
 
     def compute_system_correlation(self, avg_scores):
@@ -149,9 +151,7 @@ class PipelineEvaluator:
     def compute_sample_correlation(self, framework_scores, human_scores, print_statements=True):
 
         human_framework_correlations = self._compute_correlations_for_all_dims(framework_scores, human_scores, self.dimension_map)
-
         if print_statements:
-
             for dim in self.desired_dimensions:
                 print("CORR. {}-{}: {:>10}".format(dim, self.dimension_map[dim], round(human_framework_correlations[dim + "-" + self.dimension_map[dim]], 2)))
                 print("P-VAL. {}-{}: {:>10}".format(dim, self.dimension_map[dim], round(human_framework_correlations[dim + "-" + self.dimension_map[dim] + "-p"], 2)))
