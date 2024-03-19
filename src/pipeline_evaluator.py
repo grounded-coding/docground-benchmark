@@ -234,7 +234,7 @@ class PipelineEvaluator:
         else:
             return []
 
-    def _compute_correlations_for_all_dims(self, framework_scores, human_scores, dimension_map):
+    def _compute_correlations_for_all_dims(self, framework_scores, human_scores, dimension_map, plot_scores=False):
         """
         Compute the correlation between the framework scores and the human scores.
         :param framework_scores: A list of framework scores for each data sample
@@ -249,17 +249,18 @@ class PipelineEvaluator:
             key = framework_dim + "-" + human_dim
 
             # Plot the scores, human vs. framework
-            df = pd.DataFrame()
-            df["human"] = human_scores_dim
-            df["framework"] = framework_scores_dim
-            print(df.head())
-            sb.regplot(data=df, x="human", y="framework", x_jitter = 0.15, y_jitter = 0.15, fit_reg=False, color="b", scatter_kws = {'alpha' : 1/3, 's':4})
-            plt.xlabel(f"Human {human_dim}")
-            plt.ylabel(f"Framework {framework_dim}")
-            # save fig with unique name and create dir if not exists
-            direct = f"outputs/{self.data_collector.get_name()}/{self.data_collector.dataset_split}/{self.desired_framework.get_name()}"
-            Path(direct).mkdir(parents=True, exist_ok=True)
-            plt.savefig(f"{direct}/{key}.png", dpi=300)
+            if plot_scores:
+                df = pd.DataFrame()
+                df["human"] = human_scores_dim
+                df["framework"] = framework_scores_dim
+                print(df.head())
+                sb.regplot(data=df, x="human", y="framework", x_jitter = 0.15, y_jitter = 0.15, fit_reg=False, color="b", scatter_kws = {'alpha' : 1/3, 's':4})
+                plt.xlabel(f"Human {human_dim}")
+                plt.ylabel(f"Framework {framework_dim}")
+                # save fig with unique name and create dir if not exists
+                direct = f"outputs/{self.data_collector.get_name()}/{self.data_collector.dataset_split}/{self.desired_framework.get_name()}"
+                Path(direct).mkdir(parents=True, exist_ok=True)
+                plt.savefig(f"{direct}/{key}.png", dpi=300)
 
             if self.correlation_score == 'spearman':
                 spearman_corr, p = spearmanr(human_scores_dim, framework_scores_dim)

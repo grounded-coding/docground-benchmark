@@ -3,14 +3,7 @@ from abc import ABC, ABCMeta, abstractmethod
 from utils.file_processing import convert_to_json
 import pandas as pd
 import numpy as np
-from summ_eval.meteor_metric import MeteorMetric
-from summ_eval.bleu_metric import BleuMetric
-from nltk.translate.bleu_score import sentence_bleu
-from lleval.scorer import PromptScorer
-from lleval.evaluator import PromptTemplate, DialogEvaluator
 from collections import Counter
-from uni_eval.evaluator import get_evaluator
-from rouge_score import rouge_scorer
 from src.openai_scorer import OpenAIScorer
 from dotenv import load_dotenv
 
@@ -53,6 +46,7 @@ class UniEval(EvaluationFramework):
         super().__init__(['naturalness', 'coherence', 'groundedness', 'understandability', 'overall'])
 
     def evaluate(self, model_responses, reference_responses, turn_historys, knowledge_contexts, dims):
+        from uni_eval.evaluator import get_evaluator
         # knowledge_contexts is a list of lists of strings. for unieval these documents are concatenated and joined by a newline separator
         knowledge_contexts = ['\n'.join(context) for context in knowledge_contexts]
         # turn_historys is a list of lists of strings. for unieval these turns are concatenated and joined by a newline separator. at the very end we attach 2 newline separators
@@ -76,6 +70,7 @@ class DummyEval(EvaluationFramework):
                 score[dim] = np.random.rand()
             scores.append(score)
         return scores
+        
 
 
 class LLEval(EvaluationFramework):
@@ -88,6 +83,7 @@ class LLEval(EvaluationFramework):
         self.likert_config = likert_config
 
     def evaluate(self, model_responses, reference_responses, turn_historys, knowledge_contexts, dims):
+        from lleval.evaluator import PromptTemplate, DialogEvaluator
         data = convert_to_json(output_list=model_responses, src_list=turn_historys, context_list=knowledge_contexts)
         prompt_template = PromptTemplate(self.likert_config)
         llama2local = PromptScorer(api_url=self.api_url, metric_config_file=self.gen_config, prompt_template=prompt_template, num_retries=3)
@@ -185,6 +181,7 @@ class BLEU(SimpleEvaluationFramework):
         super().__init__(['bleu-4', 'bleu-1'], reference_required=True)
 
     def evaluate_example(self, model_response, reference_response, turn_history, knowledge_context, dims):
+        from summ_eval.bleu_metric import BleuMetric
         bleu_metric = BleuMetric()
         score = {}
         for dim in dims:
@@ -229,6 +226,7 @@ class METEOR(SimpleEvaluationFramework):
         super().__init__(['meteor'], reference_required=True)
 
     def evaluate_example(self, model_response, reference_response, turn_history, knowledge_context, dims):
+        from summ_eval.meteor_metric import MeteorMetric
         met_metric = MeteorMetric()
         score = {}
         for dim in dims:
@@ -244,6 +242,7 @@ class ROUGE(SimpleEvaluationFramework):
         super().__init__(['rougeL','rouge-1','rouge-2'], reference_required=True)
 
     def evaluate_example(self, model_response, reference_response, turn_history, knowledge_context, dims):
+        from rouge_score import rouge_scorer
         scorer = rouge_scorer.RougeScorer(dims, use_stemmer=True)
         scores = scorer.score(reference_response, model_response)
         rouge_scores = {}

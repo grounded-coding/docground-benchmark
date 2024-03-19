@@ -171,7 +171,8 @@ class DSTCHumanEvalCollector(HumanEvalCollector):
             data_human_map[model] = load_data(human_eval_path)
         self.data_human_map = data_human_map
 
-    def extract_ratings_for_sample_indices(self, sample_indices, human_dims=["accuracy", "appropriateness"], model="", print_alpha=True):
+    def extract_ratings_for_sample_indices(self, sample_indices, human_dims=["accuracy", "appropriateness"], model="", print_alpha=True,
+                                           plot_point_ratings=False):
         """
         Extracts human ratings from the DSTC human evaluation file
         :param sample_indices: The indices of the samples for which the ratings should be extracted, should never be NONE
@@ -202,18 +203,18 @@ class DSTCHumanEvalCollector(HumanEvalCollector):
                 alpha = krippendorff.alpha(value_counts=np.array(dimension_ratings[dim]), level_of_measurement="ordinal")
                 print(f"Krippendorff's Alpha for '{dim}': {alpha}")
         
-        # Plotting
-        # fig, axes = plt.subplots(1, len(human_dims), figsize=(len(human_dims)*5, 5))
-        # if len(human_dims) == 1:  # If there's only one dimension, axes won't be an array
-        #     axes = [axes]
-        # for ax, dim in zip(axes, human_dims):
-        #     ax.scatter(sample_indices, dimension_sample_ratings[dim])
-        #     ax.set_title(f'Average Ratings for {dim}')
-        #     ax.set_xlabel('Sample Index')
-        #     ax.set_ylabel('Average Rating')
-        #     ax.grid(True)
-        # plt.tight_layout()
-        # plt.savefig(f'{model}_ratings.png')
+        if plot_point_ratings:
+            fig, axes = plt.subplots(1, len(human_dims), figsize=(len(human_dims)*5, 5))
+            if len(human_dims) == 1:  # If there's only one dimension, axes won't be an array
+                axes = [axes]
+            for ax, dim in zip(axes, human_dims):
+                ax.scatter(sample_indices, dimension_sample_ratings[dim])
+                ax.set_title(f'Average Ratings for {dim}')
+                ax.set_xlabel('Sample Index')
+                ax.set_ylabel('Average Rating')
+                ax.grid(True)
+            plt.tight_layout()
+            plt.savefig(f'{model}_ratings.png')
 
         return ratings
 
