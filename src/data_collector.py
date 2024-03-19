@@ -378,7 +378,7 @@ class TopicalChatDataCollector(DataCollector):
         """
         sample_indices = []
         j = 0
-        with open(f'{self.dataset}/restructured.json') as f:
+        with open(f'{self.dataset}/restructured_usr.json') as f:
             labels = json.load(f)
             for i in range(len(labels)):
                 if labels[str(i)]["Original Ground Truth"]["context"] != "_nofact\n":
@@ -389,7 +389,7 @@ class TopicalChatDataCollector(DataCollector):
         return sample_indices
 
     def get_pred_responses(self, sample_indices, model_candidates):
-        pred_data = load_data(f'{self.dataset}/restructured.json')
+        pred_data = load_data(f'{self.dataset}/restructured_usr.json')
         model_responses = []
         for index in sample_indices:
             entrys = {}
@@ -403,7 +403,7 @@ class TopicalChatDataCollector(DataCollector):
         reference_responses = []
         turn_historys = []
         knowledge_contexts = []
-        with open(f'{self.dataset}/restructured.json') as f:
+        with open(f'{self.dataset}/restructured_usr.json') as f:
             data = json.load(f)
             for index in sample_indices:
                 cur_knowledge = data[str(index)]["Original Ground Truth"]['context']

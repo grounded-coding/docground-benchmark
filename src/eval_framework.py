@@ -84,6 +84,7 @@ class LLEval(EvaluationFramework):
 
     def evaluate(self, model_responses, reference_responses, turn_historys, knowledge_contexts, dims):
         from lleval.evaluator import PromptTemplate, DialogEvaluator
+        from lleval.scorer import PromptScorer
         data = convert_to_json(output_list=model_responses, src_list=turn_historys, context_list=knowledge_contexts)
         prompt_template = PromptTemplate(self.likert_config)
         llama2local = PromptScorer(api_url=self.api_url, metric_config_file=self.gen_config, prompt_template=prompt_template, num_retries=3)
@@ -104,6 +105,7 @@ class GPTEval(EvaluationFramework):
         self.dim_definitions = dim_definitions
 
     def evaluate(self, model_responses, reference_responses, turn_historys, knowledge_contexts, dims):
+        from lleval.evaluator import PromptTemplate, DialogEvaluator
         data = convert_to_json(output_list=model_responses, src_list=turn_historys, context_list=knowledge_contexts)
         prompt_template = PromptTemplate("configs/gpt3/prompt_likert_config.json")
         gptmodel = OpenAIScorer(metric_config_file="configs/gpt3/gen_config.json", prompt_template=prompt_template, gpt_model=self.gpt_model, num_retries=3)
@@ -147,13 +149,13 @@ class SimpleEvaluationFramework(EvaluationFramework):
 
 class KnowledgeF1(SimpleEvaluationFramework):
     def __init__(self):
-        super().__init__(['knowledge-f1'], reference_required=False)
+        super().__init__(['knowledge-f1', 'knowledge-f1A'], reference_required=False)
 
     def evaluate_example(self, model_response, reference_response, turn_history, knowledge_context, dims):
         score = {}
         for dim in dims:
-            if dim == "knowledge-f1":
-                score["knowledge-f1"] = np.mean([self._f1(model_response, doc) for doc in knowledge_context])
+            if dim == "knowledge-f1" or dim == "knowledge-f1A":
+                score[dim] = np.mean([self._f1(model_response, doc) for doc in knowledge_context])
             else:
                 raise NotImplementedError("Unknown dimension")
         return score
@@ -178,14 +180,14 @@ class KnowledgeF1(SimpleEvaluationFramework):
 
 class BLEU(SimpleEvaluationFramework):
     def __init__(self):
-        super().__init__(['bleu-4', 'bleu-1'], reference_required=True)
+        super().__init__(['bleu-4', 'bleu-1', 'bleu-4A'], reference_required=True)
 
     def evaluate_example(self, model_response, reference_response, turn_history, knowledge_context, dims):
         from summ_eval.bleu_metric import BleuMetric
         bleu_metric = BleuMetric()
         score = {}
         for dim in dims:
-            if dim == "bleu-4":
+            if dim == "bleu-4" or dim == "bleu-4A":
                 score[dim] = bleu_metric.evaluate_example(model_response, reference_response)['bleu']
             else:
                 raise NotImplementedError("BLEU-n needs a different tokenization strategy")
