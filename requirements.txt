@@ -1,5 +1,5 @@
 git+https://github.com/grounded-coding/docground-llmeval
-git+https://github.com/nils-hde/UniEval.git
+git+https://github.com/grounded-coding/UniEval
 openai
 pandas
 summ_eval
